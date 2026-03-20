@@ -45,23 +45,16 @@ export function renderComment(item, depth = 0) {
   `;
 
   row.appendChild(content);
-
-  // Tree preview (always render for alignment)
-  const validChildren = (item.children || []).filter(c => c.text != null);
-  const preview = validChildren.length > 0
-    ? renderTreePreview(validChildren)
-    : document.createElement('div');
-  preview.classList.add('tree-preview');
-  row.appendChild(preview);
-
   comment.appendChild(row);
+
+  const validChildren = (item.children || []).filter(c => c.text != null);
 
   // Children container
   if (validChildren.length > 0) {
-    // "More below" indicator
-    const peek = document.createElement('div');
-    peek.className = 'comment-peek';
-    comment.appendChild(peek);
+    // Tree preview strip below comment row
+    const preview = renderTreePreview(validChildren);
+    preview.classList.add('tree-preview');
+    comment.appendChild(preview);
 
     const childrenContainer = document.createElement('div');
     childrenContainer.className = 'comment-children';
@@ -123,25 +116,23 @@ function renderTreePreview(children) {
   canvas.className = 'tree-canvas';
   wrapper.appendChild(canvas);
 
-  const badge = document.createElement('div');
-  badge.className = 'tree-count';
-  badge.textContent = `${bars.length}`;
-  wrapper.appendChild(badge);
-
-  paintTreeCanvas(canvas, bars, new Set());
+  // Paint once visible so we can measure width
+  requestAnimationFrame(() => {
+    canvas._displayWidth = wrapper.offsetWidth || 300;
+    paintTreeCanvas(canvas, bars, new Set());
+  });
 
   return wrapper;
 }
 
 /**
- * Paint/repaint a tree canvas, dimming bars NOT in highlightSet.
- * If highlightSet is empty, all bars are drawn at full opacity.
+ * Paint/repaint a tree canvas as a wide horizontal strip with vertical fade.
  */
 function paintTreeCanvas(canvas, bars, highlightSet) {
-  const barH = 1.5;
-  const maxH = 50;
+  const barH = 2;
+  const maxH = 24;
   const scale = bars.length * barH > maxH ? maxH / (bars.length * barH) : 1;
-  const w = 40;
+  const w = canvas._displayWidth || 200;
   const h = Math.min(maxH, Math.ceil(bars.length * barH));
 
   canvas.width = w * 2;
@@ -156,17 +147,30 @@ function paintTreeCanvas(canvas, bars, highlightSet) {
 
   for (let i = 0; i < bars.length; i++) {
     const depth = bars[i];
-    const indent = depth * 3;
-    const barW = 12;
+    const indent = depth * 6;
+    const barW = w - indent;
     const x = indent;
     const y = i * barH * scale;
 
-    if (hasHighlight && highlightSet.has(i)) {
-      ctx.fillStyle = '#e00000';
-    } else {
-      ctx.fillStyle = '#ff6600';
+    // Fade out towards bottom
+    const progressY = bars.length > 1 ? i / (bars.length - 1) : 0;
+    const alphaY = 1 - progressY * 0.7;
+    const barHeight = Math.max(1, barH * scale - 0.5);
+
+    // Draw bar with horizontal fade using thin vertical slices
+    const slices = Math.ceil(barW);
+    for (let s = 0; s < slices; s++) {
+      const progressX = (x + s) / w;
+      const alphaX = Math.max(0, 1 - progressX);
+      const alpha = alphaY * alphaX;
+
+      if (hasHighlight && highlightSet.has(i)) {
+        ctx.fillStyle = `rgba(224, 0, 0, ${alpha})`;
+      } else {
+        ctx.fillStyle = `rgba(255, 102, 0, ${alpha})`;
+      }
+      ctx.fillRect(x + s, y, 1, barHeight);
     }
-    ctx.fillRect(x, y, barW, Math.max(1, barH * scale - 0.5));
   }
 }
 
@@ -184,7 +188,7 @@ export function updateTreeHighlights(commentEl) {
 }
 
 function updateSingleTree(commentEl) {
-  const preview = commentEl.querySelector(':scope > .comment-row .tree-preview');
+  const preview = commentEl.querySelector(':scope > .tree-preview');
   if (!preview?._treeData) return;
 
   const { bars } = preview._treeData;
@@ -214,6 +218,7 @@ function updateSingleTree(commentEl) {
   }
 
   walk(childrenInner, commentEl.classList.contains('expanded'));
+  canvas._displayWidth = preview.offsetWidth || canvas._displayWidth || 300;
   paintTreeCanvas(canvas, bars, highlightSet);
 }
 

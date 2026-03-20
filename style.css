@@ -146,7 +146,6 @@ body {
 
 .comment-row {
   display: flex;
-  flex-direction: row-reverse;
   align-items: stretch;
   gap: 0;
   background: #fff;
@@ -218,49 +217,26 @@ body {
   border-radius: 2px;
 }
 
-/* Tree preview — in left column via row-reverse */
+/* Tree preview strip below comment */
 .tree-preview {
-  flex-shrink: 0;
-  width: 66px;
-  padding: 4px 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 2px;
   overflow: hidden;
-  border-right: 1px solid #f0ede6;
   cursor: default;
+  transition: opacity 0.2s ease, max-height 0.3s ease;
+  max-height: 30px;
+  opacity: 1;
+  margin-left: 12px;
+  padding-left: 20px;
+  border-left: 2px solid #ff660030;
 }
 
-.tree-preview:empty {
-  width: 66px;
-  flex-shrink: 0;
+.comment.expanded > .tree-preview {
+  max-height: 0;
+  opacity: 0;
 }
 
 .tree-canvas {
   display: block;
-}
-
-.tree-count {
-  font-size: 9px;
-  color: #999;
-  text-align: center;
-  margin-top: 2px;
-  white-space: nowrap;
-}
-
-/* "More below" peek indicator */
-.comment-peek {
-  height: 3px;
-  margin-left: 12px;
-  background: linear-gradient(to right, #ff660040, #ff660010 80%, transparent);
-  transition: opacity 0.2s ease;
-  opacity: 1;
-}
-
-.comment.expanded > .comment-peek {
-  opacity: 0;
+  width: 100%;
 }
 
 /* Children container */
