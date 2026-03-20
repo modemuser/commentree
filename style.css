@@ -22,6 +22,84 @@ body {
   text-align: center;
 }
 
+/* Site header */
+.site-header {
+  background: #ff6600;
+  padding: 16px 20px;
+  border-radius: 4px 4px 0 0;
+}
+
+.site-header h1 {
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.site-header p {
+  color: rgba(255,255,255,0.8);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+/* Back link */
+.back-link {
+  display: inline-block;
+  padding: 8px 0;
+  font-size: 12px;
+  color: #ff6600;
+  text-decoration: none;
+}
+
+.back-link:hover {
+  text-decoration: underline;
+}
+
+/* Front page story list */
+.story-list-item {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: #fff;
+  border-bottom: 1px solid #f0ede6;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.1s ease;
+}
+
+.story-list-item:hover {
+  background: #fefcf7;
+}
+
+.story-list-rank {
+  flex-shrink: 0;
+  width: 56px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ff6600;
+  padding: 12px 0;
+  border-right: 1px solid #f0ede6;
+}
+
+.story-list-content {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 14px;
+}
+
+.story-list-title {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: #222;
+}
+
+.story-list-meta {
+  font-size: 11px;
+  color: #888;
+  margin-top: 3px;
+}
+
 /* Story header */
 .story-header {
   background: #ff6600;
@@ -62,6 +140,11 @@ body {
   position: relative;
 }
 
+/* Top-level leaf comments (no children) get bottom spacing matching peek height */
+#container > .comment:not(.has-children) {
+  margin-bottom: 3px;
+}
+
 .comment-row {
   display: flex;
   flex-direction: row-reverse;
@@ -72,7 +155,8 @@ body {
   transition: background 0.15s ease;
 }
 
-.comment:hover > .comment-row {
+.comment.expanded > .comment-row,
+.comment-row:hover {
   background: #fefcf7;
 }
 
@@ -135,7 +219,7 @@ body {
   border-radius: 2px;
 }
 
-/* Tree preview — miniature visualization of descendant tree */
+/* Tree preview */
 .tree-preview {
   flex-shrink: 0;
   width: 66px;
@@ -159,30 +243,6 @@ body {
   display: block;
 }
 
-/* Children container — hidden until parent is hovered */
-.comment-children {
-  display: none;
-  padding-left: 20px;
-  border-left: 2px solid #ff660030;
-  margin-left: 12px;
-}
-
-/* Reveal direct children on hover */
-.comment:hover > .comment-children {
-  display: block;
-}
-
-/* Depth-based left border colors */
-.comment:hover > .comment-children > .comment:hover > .comment-children {
-  border-left-color: #ff660025;
-}
-
-/* Subtle depth indicator */
-.comment-children .comment-row {
-  padding-left: 0;
-}
-
-/* Count badge on tree preview */
 .tree-count {
   font-size: 9px;
   color: #999;
@@ -190,3 +250,38 @@ body {
   margin-top: 2px;
   white-space: nowrap;
 }
+
+/* "More below" peek indicator — visible when children are collapsed */
+.comment-peek {
+  height: 3px;
+  margin-left: 12px;
+  background: linear-gradient(to right, #ff660040, #ff660010 80%, transparent);
+  transition: opacity 0.2s ease;
+  opacity: 1;
+}
+
+.comment.expanded > .comment-peek {
+  opacity: 0;
+}
+
+/* Children container — controlled by JS .expanded class */
+.comment-children {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 0.3s ease, opacity 0.2s ease;
+  padding-left: 20px;
+  border-left: 2px solid #ff660030;
+  margin-left: 12px;
+}
+
+.comment-children-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.comment.expanded > .comment-children {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+

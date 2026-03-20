@@ -1,7 +1,6 @@
-import { fetchThread } from './api.js';
-import { renderStory, renderComment } from './render.js';
-
-const DEFAULT_THREAD = '47440430';
+import { fetchThread, fetchFrontPage } from './api.js';
+import { renderStory, renderComment, renderFrontPage } from './render.js';
+import { setupInteractions } from './interact.js';
 
 function countDescendants(item) {
   let count = 0;
@@ -12,20 +11,21 @@ function countDescendants(item) {
   return count;
 }
 
-async function init() {
-  const params = new URLSearchParams(window.location.search);
-  const threadId = params.get('id') || DEFAULT_THREAD;
-
+async function loadThread(threadId) {
   const container = document.getElementById('container');
-  const loading = document.getElementById('loading');
+  container.innerHTML = '<div id="loading">Loading thread...</div>';
 
   try {
-    loading.textContent = `Loading thread ${threadId}...`;
     const raw = await fetchThread(threadId);
+    container.innerHTML = '';
 
-    loading.remove();
+    // Back link
+    const back = document.createElement('a');
+    back.href = './';
+    back.className = 'back-link';
+    back.textContent = '\u2190 front page';
+    container.appendChild(back);
 
-    // Story header
     const story = {
       title: raw.title,
       url: raw.url,
@@ -36,18 +36,45 @@ async function init() {
     };
     container.appendChild(renderStory(story));
 
-    // Top-level comments
     const topLevel = (raw.children || []).filter(c => c.text != null);
     for (const child of topLevel) {
       const el = renderComment(child);
       if (el) container.appendChild(el);
     }
 
+    setupInteractions();
     document.title = `${story.title} — commentree`;
   } catch (err) {
-    loading.textContent = `Failed to load: ${err.message}`;
-    console.error(err);
+    container.innerHTML = `<div id="loading">Failed to load: ${err.message}</div>`;
   }
 }
 
-init();
+async function loadFrontPage() {
+  const container = document.getElementById('container');
+  container.innerHTML = '<div id="loading">Loading front page...</div>';
+
+  try {
+    const stories = await fetchFrontPage();
+    container.innerHTML = '';
+
+    const header = document.createElement('div');
+    header.className = 'site-header';
+    header.innerHTML = '<h1>commentree</h1><p>Hacker News, with tree previews</p>';
+    container.appendChild(header);
+
+    container.appendChild(renderFrontPage(stories));
+    document.title = 'commentree';
+  } catch (err) {
+    container.innerHTML = `<div id="loading">Failed to load: ${err.message}</div>`;
+  }
+}
+
+// Route based on ?id= param
+const params = new URLSearchParams(window.location.search);
+const threadId = params.get('id');
+
+if (threadId) {
+  loadThread(threadId);
+} else {
+  loadFrontPage();
+}
