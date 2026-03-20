@@ -1,6 +1,7 @@
 import { fetchThread, fetchFrontPage } from './api.js';
 import { renderStory, renderComment, renderFrontPage } from './render.js';
 import { setupInteractions } from './interact.js';
+import { setupOnboarding } from './onboard.js';
 
 function countDescendants(item) {
   let count = 0;
@@ -43,6 +44,7 @@ async function loadThread(threadId) {
     }
 
     setupInteractions();
+    setupOnboarding();
     document.title = `${story.title} — commentree`;
   } catch (err) {
     container.innerHTML = `<div id="loading">Failed to load: ${err.message}</div>`;

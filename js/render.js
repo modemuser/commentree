@@ -83,7 +83,7 @@ function renderTreePreview(children) {
   const wrapper = document.createElement('div');
   wrapper.className = 'tree-preview';
 
-  const bars = []; // { depth, descendants }
+  const bars = []; // { depth, descendants, textLen }
 
   function countDescendants(item) {
     let count = 0;
@@ -98,7 +98,7 @@ function renderTreePreview(children) {
     for (const item of items) {
       if (item.text == null) continue;
       const validChildren = (item.children || []).filter(c => c.text != null);
-      bars.push({ depth, descendants: countDescendants(item) });
+      bars.push({ depth, descendants: countDescendants(item), textLen: item.text.length });
       if (validChildren.length > 0) {
         collectBars(validChildren, depth + 1);
       }
@@ -140,7 +140,7 @@ function paintTreeCanvas(canvas, bars) {
   ctx.scale(2, 2);
 
   for (let i = 0; i < bars.length; i++) {
-    const { depth, descendants } = bars[i];
+    const { depth, descendants, textLen } = bars[i];
     const indent = depth * 6;
     const barW = w - indent;
     const x = indent;
@@ -148,8 +148,8 @@ function paintTreeCanvas(canvas, bars) {
 
     const barHeight = Math.max(1, barH * scale - 0.5);
 
-    // sqrt scale: leaf=0.08, 4 desc=0.24, 25 desc=0.48, 100 desc=0.88
-    const intensity = 0.15 + Math.sqrt(descendants) * 0.12;
+    // Continuous darkening: text length dominates, descendants add a hint
+    const intensity = 0.12 + Math.sqrt(textLen) * 0.006 + Math.sqrt(descendants) * 0.07;
 
     ctx.fillStyle = `rgba(0, 0, 0, ${intensity})`;
     ctx.fillRect(x, y, barW, barHeight);
