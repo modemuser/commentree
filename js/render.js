@@ -84,13 +84,15 @@ export function renderComment(item, depth = 0) {
 }
 
 /**
- * Render a compact tree preview showing the shape of the subtree.
+ * Render compact tree preview — canvas with bars for each descendant.
  */
 function renderTreePreview(children) {
-  const preview = document.createElement('div');
-  preview.className = 'tree-preview';
+  const wrapper = document.createElement('div');
+  wrapper.className = 'tree-preview';
 
   const bars = [];
+  // Track which bar range belongs to each direct child index
+  const childRanges = []; // [{ start, end }] per direct child
 
   function collectBars(items, depth) {
     for (const item of items) {
@@ -103,24 +105,54 @@ function renderTreePreview(children) {
     }
   }
 
-  collectBars(children, 0);
-  if (bars.length === 0) return preview;
+  let barIndex = 0;
+  for (const child of children) {
+    if (child.text == null) continue;
+    const start = barIndex;
+    collectBars([child], 0);
+    childRanges.push({ start, end: bars.length });
+    barIndex = bars.length;
+  }
+
+  if (bars.length === 0) return wrapper;
+
+  // Store data on wrapper for re-rendering with highlights
+  wrapper._treeData = { bars, childRanges };
 
   const canvas = document.createElement('canvas');
+  canvas.className = 'tree-canvas';
+  wrapper.appendChild(canvas);
+
+  const badge = document.createElement('div');
+  badge.className = 'tree-count';
+  badge.textContent = `${bars.length}`;
+  wrapper.appendChild(badge);
+
+  paintTreeCanvas(canvas, bars, new Set());
+
+  return wrapper;
+}
+
+/**
+ * Paint/repaint a tree canvas, dimming bars NOT in highlightSet.
+ * If highlightSet is empty, all bars are drawn at full opacity.
+ */
+function paintTreeCanvas(canvas, bars, highlightSet) {
   const barH = 1.5;
-  const maxH = 60;
+  const maxH = 50;
   const scale = bars.length * barH > maxH ? maxH / (bars.length * barH) : 1;
-  const w = 50;
+  const w = 40;
   const h = Math.min(maxH, Math.ceil(bars.length * barH));
 
   canvas.width = w * 2;
   canvas.height = h * 2;
   canvas.style.width = `${w}px`;
   canvas.style.height = `${h}px`;
-  canvas.className = 'tree-canvas';
 
   const ctx = canvas.getContext('2d');
   ctx.scale(2, 2);
+
+  const hasHighlight = highlightSet.size > 0;
 
   for (let i = 0; i < bars.length; i++) {
     const depth = bars[i];
@@ -128,18 +160,61 @@ function renderTreePreview(children) {
     const barW = 12;
     const x = indent;
     const y = i * barH * scale;
-    ctx.fillStyle = '#ff6600';
+
+    if (hasHighlight && highlightSet.has(i)) {
+      ctx.fillStyle = '#e00000';
+    } else {
+      ctx.fillStyle = '#ff6600';
+    }
     ctx.fillRect(x, y, barW, Math.max(1, barH * scale - 0.5));
   }
+}
 
-  preview.appendChild(canvas);
+/**
+ * Update tree preview highlighting for a comment and all its ancestors.
+ * Walks the DOM descendant tree in DFS order (matching bar order) and
+ * highlights every bar whose comment has the 'expanded' class.
+ */
+export function updateTreeHighlights(commentEl) {
+  let el = commentEl;
+  while (el) {
+    updateSingleTree(el);
+    el = el.parentElement?.closest?.('.comment');
+  }
+}
 
-  const badge = document.createElement('div');
-  badge.className = 'tree-count';
-  badge.textContent = `${bars.length}`;
-  preview.appendChild(badge);
+function updateSingleTree(commentEl) {
+  const preview = commentEl.querySelector(':scope > .comment-row .tree-preview');
+  if (!preview?._treeData) return;
 
-  return preview;
+  const { bars } = preview._treeData;
+  const canvas = preview.querySelector('.tree-canvas');
+  if (!canvas) return;
+
+  const childrenInner = commentEl.querySelector(':scope > .comment-children > .comment-children-inner');
+  if (!childrenInner) {
+    paintTreeCanvas(canvas, bars, new Set());
+    return;
+  }
+
+  const highlightSet = new Set();
+  let barIdx = 0;
+
+  function walk(container, visible) {
+    for (const child of container.children) {
+      if (!child.classList.contains('comment')) continue;
+      if (barIdx >= bars.length) return;
+
+      if (visible) highlightSet.add(barIdx);
+      barIdx++;
+
+      const inner = child.querySelector(':scope > .comment-children > .comment-children-inner');
+      if (inner) walk(inner, visible && child.classList.contains('expanded'));
+    }
+  }
+
+  walk(childrenInner, commentEl.classList.contains('expanded'));
+  paintTreeCanvas(canvas, bars, highlightSet);
 }
 
 /**

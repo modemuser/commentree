@@ -140,7 +140,6 @@ body {
   position: relative;
 }
 
-/* Top-level leaf comments (no children) get bottom spacing matching peek height */
 #container > .comment:not(.has-children) {
   margin-bottom: 3px;
 }
@@ -219,7 +218,7 @@ body {
   border-radius: 2px;
 }
 
-/* Tree preview */
+/* Tree preview — in left column via row-reverse */
 .tree-preview {
   flex-shrink: 0;
   width: 66px;
@@ -227,7 +226,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   gap: 2px;
   overflow: hidden;
   border-right: 1px solid #f0ede6;
@@ -251,7 +250,7 @@ body {
   white-space: nowrap;
 }
 
-/* "More below" peek indicator — visible when children are collapsed */
+/* "More below" peek indicator */
 .comment-peek {
   height: 3px;
   margin-left: 12px;
@@ -264,7 +263,7 @@ body {
   opacity: 0;
 }
 
-/* Children container — controlled by JS .expanded class */
+/* Children container */
 .comment-children {
   display: grid;
   grid-template-rows: 0fr;
@@ -284,4 +283,3 @@ body {
   grid-template-rows: 1fr;
   opacity: 1;
 }
-

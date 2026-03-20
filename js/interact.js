@@ -1,6 +1,8 @@
 /**
- * Hover to expand, click to pin, scroll compensation on collapse.
+ * Hover to expand, scroll compensation on collapse.
  */
+
+import { updateTreeHighlights } from './render.js';
 
 const COLLAPSE_DELAY = 400;
 
@@ -19,6 +21,7 @@ export function setupInteractions() {
     // Expand
     if (!comment.classList.contains('expanded')) {
       comment.classList.add('expanded');
+      updateTreeHighlights(comment);
     }
   });
 
@@ -82,6 +85,12 @@ function collapse(comment, timers) {
       timers.delete(desc);
     }
   });
+
+  // Update parent's tree highlight (this comment is no longer expanded)
+  const parentComment = comment.parentElement?.closest?.('.comment');
+  if (parentComment) updateTreeHighlights(parentComment);
+  // Clear own highlight since no children are expanded
+  updateTreeHighlights(comment);
 
   // Scroll compensation: if collapse happened above viewport center,
   // adjust scroll so content under cursor stays in place
