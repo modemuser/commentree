@@ -1,13 +1,28 @@
 /**
- * Hover to expand, scroll compensation on collapse.
+ * Hover to expand, scroll floor enforcement on collapse.
  */
 
 const COLLAPSE_DELAY = 400;
 const EXPAND_DELAY = 150;
+const STAGGER_DELAY = 80;
+
+// Scroll floor: prevents viewport from jumping up during collapses
+let scrollFloor = 0;
+let collapseActive = 0;
+let collapseTimer = null;
+
+window.addEventListener('scroll', () => {
+  if (collapseActive === 0) {
+    scrollFloor = window.scrollY;
+  } else if (window.scrollY < scrollFloor) {
+    const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+    window.scrollTo(0, Math.min(scrollFloor, maxScroll));
+  }
+});
 
 export function setupInteractions() {
-  const collapseTimers = new Map(); // comment element -> timer id
-  const expandTimers = new Map(); // comment element -> timer id
+  const collapseTimers = new Map();
+  const expandTimers = new Map();
 
   document.addEventListener('mouseover', (e) => {
     const row = e.target.closest?.('.comment-row');
@@ -15,15 +30,13 @@ export function setupInteractions() {
     const comment = row.parentElement;
     if (!comment?.classList.contains('has-children')) return;
 
-    // Cancel any pending collapse on this and ancestor comments
     cancelCollapseChain(comment, collapseTimers);
 
-    // Schedule expand with delay
     if (!comment.classList.contains('expanded') && !expandTimers.has(comment)) {
       const timer = setTimeout(() => {
         expandTimers.delete(comment);
         comment.classList.add('expanded');
-        }, EXPAND_DELAY);
+      }, EXPAND_DELAY);
       expandTimers.set(comment, timer);
     }
   });
@@ -32,25 +45,63 @@ export function setupInteractions() {
     const comment = e.target.closest?.('.comment');
     if (!comment?.classList.contains('has-children')) return;
 
-    // Check if we're moving to something still inside this comment
     const related = e.relatedTarget;
     if (related && comment.contains(related)) return;
 
-    // Cancel pending expand
     if (expandTimers.has(comment)) {
       clearTimeout(expandTimers.get(comment));
       expandTimers.delete(comment);
     }
 
-    // Schedule collapse with delay
     scheduleCollapse(comment, collapseTimers);
   });
 
+  const container = document.getElementById('container');
+  container.addEventListener('mouseleave', () => {
+    for (const [, timer] of expandTimers) clearTimeout(timer);
+    expandTimers.clear();
+
+    const expanded = [];
+    container.querySelectorAll('.comment.expanded').forEach(el => {
+      let depth = 0;
+      let parent = el.parentElement?.closest?.('.comment');
+      while (parent) { depth++; parent = parent.parentElement?.closest?.('.comment'); }
+      expanded.push({ el, depth });
+    });
+
+    expanded.sort((a, b) => b.depth - a.depth);
+
+    const byDepth = new Map();
+    for (const { el, depth } of expanded) {
+      if (!byDepth.has(depth)) byDepth.set(depth, []);
+      byDepth.get(depth).push(el);
+    }
+
+    const depths = [...byDepth.keys()].sort((a, b) => b - a);
+    depths.forEach((depth, i) => {
+      const comments = byDepth.get(depth);
+      const delay = COLLAPSE_DELAY + i * STAGGER_DELAY;
+
+      for (const comment of comments) {
+        if (collapseTimers.has(comment)) {
+          clearTimeout(collapseTimers.get(comment));
+          collapseTimers.delete(comment);
+        }
+
+        const timer = setTimeout(() => {
+          collapseTimers.delete(comment);
+          if (comment.classList.contains('expanded')) {
+            collapseSingle(comment);
+          }
+        }, delay);
+        collapseTimers.set(comment, timer);
+      }
+    });
+  });
 }
 
 function scheduleCollapse(comment, timers, delay = COLLAPSE_DELAY) {
-  // Don't collapse if pinned
-  if (comment.classList.contains('pinned')) return;
+  if (timers.has(comment)) return;
 
   const timer = setTimeout(() => {
     timers.delete(comment);
@@ -61,7 +112,6 @@ function scheduleCollapse(comment, timers, delay = COLLAPSE_DELAY) {
 }
 
 function cancelCollapseChain(comment, timers) {
-  // Cancel collapse for this comment and all ancestors
   let el = comment;
   while (el) {
     if (timers.has(el)) {
@@ -72,44 +122,48 @@ function cancelCollapseChain(comment, timers) {
   }
 }
 
-function collapse(comment, timers) {
-  // Measure height before collapse for scroll compensation
-  const childrenEl = comment.querySelector(':scope > .comment-children');
-  if (!childrenEl) return;
+function beginCollapse() {
+  collapseActive++;
+  clearTimeout(collapseTimer);
+  collapseTimer = setTimeout(() => {
+    collapseActive = 0;
+    scrollFloor = window.scrollY;
+  }, 500);
+}
 
-  const rect = comment.getBoundingClientRect();
-  const viewportY = window.scrollY;
+function collapseSingle(comment) {
+  const row = comment.querySelector(':scope > .comment-row');
+  if (!row) return;
 
-  // Only compensate if the collapse happens above or at the viewport
-  const collapseTop = rect.top + window.scrollY;
-  const heightBefore = childrenEl.scrollHeight;
+  const rowRect = row.getBoundingClientRect();
+  if (rowRect.bottom < 0 || rowRect.top > window.innerHeight) return;
 
+  beginCollapse();
   comment.classList.remove('expanded');
+}
 
-  // Also collapse any expanded descendants
+function collapse(comment, timers) {
+  const toCollapse = [];
   comment.querySelectorAll('.expanded').forEach(desc => {
-    desc.classList.remove('expanded');
     if (timers.has(desc)) {
       clearTimeout(timers.get(desc));
       timers.delete(desc);
     }
+    toCollapse.push(desc);
+  });
+  toCollapse.push(comment);
+
+  toCollapse.sort((a, b) => {
+    let dA = 0, el = a;
+    while ((el = el.parentElement?.closest?.('.comment'))) dA++;
+    let dB = 0; el = b;
+    while ((el = el.parentElement?.closest?.('.comment'))) dB++;
+    return dB - dA;
   });
 
-  // Update parent's tree highlight (this comment is no longer expanded)
-  const parentComment = comment.parentElement?.closest?.('.comment');
-  if (parentComment) updateTreeHighlights(parentComment);
-  // Clear own highlight since no children are expanded
-  updateTreeHighlights(comment);
-
-  // Scroll compensation: if collapse happened above viewport center,
-  // adjust scroll so content under cursor stays in place
-  if (collapseTop < viewportY + window.innerHeight / 2) {
-    requestAnimationFrame(() => {
-      const heightAfter = childrenEl.scrollHeight;
-      const delta = heightBefore - heightAfter;
-      if (delta > 0) {
-        window.scrollBy(0, -delta);
-      }
-    });
+  for (const el of toCollapse) {
+    if (el.classList.contains('expanded')) {
+      collapseSingle(el);
+    }
   }
 }

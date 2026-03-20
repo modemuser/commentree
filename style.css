@@ -129,6 +129,10 @@ body {
   color: rgba(255,255,255,0.7);
 }
 
+.story-list-item .story-domain {
+  color: #999;
+}
+
 .story-meta {
   font-size: 11px;
   color: rgba(255,255,255,0.8);
