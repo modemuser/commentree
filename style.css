@@ -146,7 +146,7 @@ body {
   position: relative;
 }
 
-#container > .comment:not(.has-children) {
+.comment:not(.has-children) {
   margin-bottom: 3px;
 }
 
@@ -230,9 +230,8 @@ body {
   transition: opacity 0.2s ease, max-height 0.3s ease;
   max-height: 30px;
   opacity: 1;
-  margin-left: 12px;
-  padding-left: 0;
-  border-left: 2px solid #ff660030;
+  padding-left: 9px;
+  border-left: 2px solid #f0ede6;
 }
 
 .tree-canvas {
@@ -252,9 +251,8 @@ body {
   grid-template-rows: 0fr;
   opacity: 0;
   transition: grid-template-rows 0.3s ease, opacity 0.2s ease;
-  padding-left: 20px;
-  border-left: 2px solid #ff660030;
-  margin-left: 12px;
+  padding-left: 32px;
+  border-left: 2px solid #f0ede6;
 }
 
 .comment-children-inner {
