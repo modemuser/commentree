@@ -224,7 +224,7 @@ body {
 /* Tree preview strip below comment */
 .tree-preview {
   overflow: hidden;
-  cursor: default;
+  cursor: pointer;
   transition: opacity 0.2s ease, max-height 0.3s ease;
   max-height: 30px;
   opacity: 1;

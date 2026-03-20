@@ -56,6 +56,43 @@ export function setupInteractions() {
     scheduleCollapse(comment, collapseTimers);
   });
 
+  // Touch: tap comment row to toggle, tap tree preview to expand
+  const isTouch = matchMedia('(pointer: coarse)').matches;
+
+  if (isTouch) {
+    document.addEventListener('click', (e) => {
+      // Don't intercept link clicks
+      if (e.target.closest('a')) return;
+
+      // Tap tree preview to expand parent comment
+      const preview = e.target.closest?.('.tree-preview');
+      if (preview) {
+        const comment = preview.parentElement;
+        if (comment?.classList.contains('has-children') && !comment.classList.contains('expanded')) {
+          comment.classList.add('expanded');
+          return;
+        }
+      }
+
+      // Tap comment row to toggle
+      const row = e.target.closest?.('.comment-row');
+      if (!row) return;
+      const comment = row.parentElement;
+      if (!comment?.classList.contains('has-children')) return;
+
+      if (comment.classList.contains('expanded')) {
+        // Collapse this comment and descendants
+        comment.querySelectorAll('.expanded').forEach(desc => {
+          desc.classList.remove('expanded');
+        });
+        beginCollapse();
+        comment.classList.remove('expanded');
+      } else {
+        comment.classList.add('expanded');
+      }
+    });
+  }
+
   const container = document.getElementById('container');
   container.addEventListener('mouseleave', () => {
     for (const [, timer] of expandTimers) clearTimeout(timer);

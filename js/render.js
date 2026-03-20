@@ -97,8 +97,8 @@ function renderTreePreview(children) {
   function collectBars(items, depth) {
     for (const item of items) {
       if (item.text == null) continue;
-      bars.push({ depth, descendants: countDescendants(item) });
       const validChildren = (item.children || []).filter(c => c.text != null);
+      bars.push({ depth, descendants: countDescendants(item) });
       if (validChildren.length > 0) {
         collectBars(validChildren, depth + 1);
       }
@@ -139,8 +139,6 @@ function paintTreeCanvas(canvas, bars) {
   const ctx = canvas.getContext('2d');
   ctx.scale(2, 2);
 
-  const maxDesc = Math.max(...bars.map(b => b.descendants), 1);
-
   for (let i = 0; i < bars.length; i++) {
     const { depth, descendants } = bars[i];
     const indent = depth * 6;
@@ -150,8 +148,8 @@ function paintTreeCanvas(canvas, bars) {
 
     const barHeight = Math.max(1, barH * scale - 0.5);
 
-    // More descendants → darker (0.03 to 0.15)
-    const intensity = 0.1 + (descendants / maxDesc) * 0.4;
+    // sqrt scale: leaf=0.08, 4 desc=0.24, 25 desc=0.48, 100 desc=0.88
+    const intensity = 0.15 + Math.sqrt(descendants) * 0.12;
 
     ctx.fillStyle = `rgba(0, 0, 0, ${intensity})`;
     ctx.fillRect(x, y, barW, barHeight);
