@@ -2,12 +2,12 @@
  * Hover to expand, scroll compensation on collapse.
  */
 
-import { updateTreeHighlights } from './render.js';
-
 const COLLAPSE_DELAY = 400;
+const EXPAND_DELAY = 150;
 
 export function setupInteractions() {
   const collapseTimers = new Map(); // comment element -> timer id
+  const expandTimers = new Map(); // comment element -> timer id
 
   document.addEventListener('mouseover', (e) => {
     const row = e.target.closest?.('.comment-row');
@@ -18,10 +18,13 @@ export function setupInteractions() {
     // Cancel any pending collapse on this and ancestor comments
     cancelCollapseChain(comment, collapseTimers);
 
-    // Expand
-    if (!comment.classList.contains('expanded')) {
-      comment.classList.add('expanded');
-      updateTreeHighlights(comment);
+    // Schedule expand with delay
+    if (!comment.classList.contains('expanded') && !expandTimers.has(comment)) {
+      const timer = setTimeout(() => {
+        expandTimers.delete(comment);
+        comment.classList.add('expanded');
+        }, EXPAND_DELAY);
+      expandTimers.set(comment, timer);
     }
   });
 
@@ -32,6 +35,12 @@ export function setupInteractions() {
     // Check if we're moving to something still inside this comment
     const related = e.relatedTarget;
     if (related && comment.contains(related)) return;
+
+    // Cancel pending expand
+    if (expandTimers.has(comment)) {
+      clearTimeout(expandTimers.get(comment));
+      expandTimers.delete(comment);
+    }
 
     // Schedule collapse with delay
     scheduleCollapse(comment, collapseTimers);

@@ -83,14 +83,21 @@ function renderTreePreview(children) {
   const wrapper = document.createElement('div');
   wrapper.className = 'tree-preview';
 
-  const bars = [];
-  // Track which bar range belongs to each direct child index
-  const childRanges = []; // [{ start, end }] per direct child
+  const bars = []; // { depth, descendants }
+
+  function countDescendants(item) {
+    let count = 0;
+    for (const c of item.children || []) {
+      if (c.text == null) continue;
+      count += 1 + countDescendants(c);
+    }
+    return count;
+  }
 
   function collectBars(items, depth) {
     for (const item of items) {
       if (item.text == null) continue;
-      bars.push(depth);
+      bars.push({ depth, descendants: countDescendants(item) });
       const validChildren = (item.children || []).filter(c => c.text != null);
       if (validChildren.length > 0) {
         collectBars(validChildren, depth + 1);
@@ -98,19 +105,8 @@ function renderTreePreview(children) {
     }
   }
 
-  let barIndex = 0;
-  for (const child of children) {
-    if (child.text == null) continue;
-    const start = barIndex;
-    collectBars([child], 0);
-    childRanges.push({ start, end: bars.length });
-    barIndex = bars.length;
-  }
-
+  collectBars(children, 0);
   if (bars.length === 0) return wrapper;
-
-  // Store data on wrapper for re-rendering with highlights
-  wrapper._treeData = { bars, childRanges };
 
   const canvas = document.createElement('canvas');
   canvas.className = 'tree-canvas';
@@ -119,7 +115,7 @@ function renderTreePreview(children) {
   // Paint once visible so we can measure width
   requestAnimationFrame(() => {
     canvas._displayWidth = wrapper.offsetWidth || 300;
-    paintTreeCanvas(canvas, bars, new Set());
+    paintTreeCanvas(canvas, bars);
   });
 
   return wrapper;
@@ -128,7 +124,7 @@ function renderTreePreview(children) {
 /**
  * Paint/repaint a tree canvas as a wide horizontal strip with vertical fade.
  */
-function paintTreeCanvas(canvas, bars, highlightSet) {
+function paintTreeCanvas(canvas, bars) {
   const barH = 2;
   const maxH = 24;
   const scale = bars.length * barH > maxH ? maxH / (bars.length * barH) : 1;
@@ -143,83 +139,23 @@ function paintTreeCanvas(canvas, bars, highlightSet) {
   const ctx = canvas.getContext('2d');
   ctx.scale(2, 2);
 
-  const hasHighlight = highlightSet.size > 0;
+  const maxDesc = Math.max(...bars.map(b => b.descendants), 1);
 
   for (let i = 0; i < bars.length; i++) {
-    const depth = bars[i];
+    const { depth, descendants } = bars[i];
     const indent = depth * 6;
     const barW = w - indent;
     const x = indent;
     const y = i * barH * scale;
 
-    // Fade out towards bottom
-    const progressY = bars.length > 1 ? i / (bars.length - 1) : 0;
-    const alphaY = 1 - progressY * 0.7;
     const barHeight = Math.max(1, barH * scale - 0.5);
 
-    // Draw bar with horizontal fade using thin vertical slices
-    const slices = Math.ceil(barW);
-    for (let s = 0; s < slices; s++) {
-      const progressX = (x + s) / w;
-      const alphaX = Math.max(0, 1 - progressX);
-      const alpha = alphaY * alphaX;
+    // More descendants → darker (0.03 to 0.15)
+    const intensity = 0.1 + (descendants / maxDesc) * 0.4;
 
-      if (hasHighlight && highlightSet.has(i)) {
-        ctx.fillStyle = `rgba(224, 0, 0, ${alpha})`;
-      } else {
-        ctx.fillStyle = `rgba(255, 102, 0, ${alpha})`;
-      }
-      ctx.fillRect(x + s, y, 1, barHeight);
-    }
+    ctx.fillStyle = `rgba(0, 0, 0, ${intensity})`;
+    ctx.fillRect(x, y, barW, barHeight);
   }
-}
-
-/**
- * Update tree preview highlighting for a comment and all its ancestors.
- * Walks the DOM descendant tree in DFS order (matching bar order) and
- * highlights every bar whose comment has the 'expanded' class.
- */
-export function updateTreeHighlights(commentEl) {
-  let el = commentEl;
-  while (el) {
-    updateSingleTree(el);
-    el = el.parentElement?.closest?.('.comment');
-  }
-}
-
-function updateSingleTree(commentEl) {
-  const preview = commentEl.querySelector(':scope > .tree-preview');
-  if (!preview?._treeData) return;
-
-  const { bars } = preview._treeData;
-  const canvas = preview.querySelector('.tree-canvas');
-  if (!canvas) return;
-
-  const childrenInner = commentEl.querySelector(':scope > .comment-children > .comment-children-inner');
-  if (!childrenInner) {
-    paintTreeCanvas(canvas, bars, new Set());
-    return;
-  }
-
-  const highlightSet = new Set();
-  let barIdx = 0;
-
-  function walk(container, visible) {
-    for (const child of container.children) {
-      if (!child.classList.contains('comment')) continue;
-      if (barIdx >= bars.length) return;
-
-      if (visible) highlightSet.add(barIdx);
-      barIdx++;
-
-      const inner = child.querySelector(':scope > .comment-children > .comment-children-inner');
-      if (inner) walk(inner, visible && child.classList.contains('expanded'));
-    }
-  }
-
-  walk(childrenInner, commentEl.classList.contains('expanded'));
-  canvas._displayWidth = preview.offsetWidth || canvas._displayWidth || 300;
-  paintTreeCanvas(canvas, bars, highlightSet);
 }
 
 /**
