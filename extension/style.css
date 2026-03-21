@@ -126,7 +126,30 @@
   }
 }
 
-/* Onboarding overlay — desktop only */
+/* Info button */
+.ct-info-btn {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid #ddd;
+  background: #fff;
+  color: #999;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  z-index: 100;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.ct-info-btn:hover {
+  color: #ff6600;
+  border-color: #ff6600;
+}
+
+/* Onboarding overlay */
 .ct-onboard-overlay {
   position: fixed;
   inset: 0;
@@ -155,6 +178,21 @@
   font-weight: 700;
   color: #ff6600;
   margin-bottom: 12px;
+}
+
+.ct-onboard-author {
+  margin-top: 16px;
+  font-size: 12px;
+  color: #bbb;
+}
+
+.ct-onboard-author a {
+  color: #ff6600;
+  text-decoration: none;
+}
+
+.ct-onboard-author a:hover {
+  text-decoration: underline;
 }
 
 .ct-onboard-dismiss {

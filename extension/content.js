@@ -406,31 +406,74 @@
     }
   }
 
-  // ── Onboarding (desktop only) ──────────────────────────────
+  // ── Onboarding + info button ──────────────────────────────
 
-  if (!matchMedia('(pointer: coarse)').matches && !sessionStorage.getItem('commentree_onboarded')) {
-    sessionStorage.setItem('commentree_onboarded', '1');
+  const isTouch = matchMedia('(pointer: coarse)').matches;
+
+  function showOnboarding() {
+    document.querySelector('.ct-onboard-overlay')?.remove();
     const overlay = document.createElement('div');
     overlay.className = 'ct-onboard-overlay';
-    overlay.innerHTML = `
-      <div class="ct-onboard-content">
-        <p class="ct-onboard-title">commentree</p>
-        <p>Navigate the comment tree with your cursor.</p>
-        <p>Move to the left margin to expand replies.</p>
-        <p>Click a comment to pin it open.</p>
-        <p class="ct-onboard-dismiss">move your cursor to the left to begin</p>
-      </div>
-    `;
-    document.body.appendChild(overlay);
-    requestAnimationFrame(() => overlay.classList.add('ct-visible'));
 
-    document.addEventListener('mousemove', function onMove(e) {
-      const rect = container.getBoundingClientRect();
-      if (e.clientX < rect.left) {
-        overlay.classList.remove('ct-visible');
-        setTimeout(() => overlay.remove(), 500);
+    if (isTouch) {
+      overlay.innerHTML = `
+        <div class="ct-onboard-content">
+          <p class="ct-onboard-title">commentree</p>
+          <p>Tap a comment to expand its reply tree.</p>
+          <p>Tap again to collapse.</p>
+          <p class="ct-onboard-author">by <a href="https://news.ycombinator.com/user?id=modemuser" target="_blank">modemuser</a></p>
+          <p class="ct-onboard-dismiss">tap anywhere to start</p>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+      requestAnimationFrame(() => overlay.classList.add('ct-visible'));
+      overlay.addEventListener('click', () => dismissOnboarding(overlay));
+    } else {
+      overlay.innerHTML = `
+        <div class="ct-onboard-content">
+          <p class="ct-onboard-title">commentree</p>
+          <p>Explore and read comment trees with your mouse cursor, hover to expand.</p>
+          <p>Each line represents a comment — darker lines mean longer comments.</p>
+          <p>Best to interact with the tree from the left.</p>
+          <p class="ct-onboard-author">by <a href="https://news.ycombinator.com/user?id=modemuser" target="_blank">modemuser</a></p>
+          <p class="ct-onboard-dismiss">move your cursor to the left margin to begin</p>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+      requestAnimationFrame(() => overlay.classList.add('ct-visible'));
+
+      overlay.addEventListener('click', (e) => {
+        if (e.target.closest('a')) return;
+        dismissOnboarding(overlay);
         document.removeEventListener('mousemove', onMove);
+      });
+
+      function onMove(e) {
+        const rect = container.getBoundingClientRect();
+        if (e.clientX < rect.left) {
+          dismissOnboarding(overlay);
+          document.removeEventListener('mousemove', onMove);
+        }
       }
-    });
+      document.addEventListener('mousemove', onMove);
+    }
+  }
+
+  function dismissOnboarding(overlay) {
+    localStorage.setItem('commentree_onboarded', '1');
+    overlay.classList.remove('ct-visible');
+    setTimeout(() => overlay.remove(), 500);
+  }
+
+  // Info button
+  const infoBtn = document.createElement('button');
+  infoBtn.className = 'ct-info-btn';
+  infoBtn.textContent = '?';
+  infoBtn.addEventListener('click', showOnboarding);
+  document.body.appendChild(infoBtn);
+
+  // Show onboarding on first visit
+  if (!localStorage.getItem('commentree_onboarded')) {
+    showOnboarding();
   }
 })();
