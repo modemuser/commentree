@@ -23,26 +23,28 @@
    parent is expanded or comment is top-level. */
 .ct-comment {
   display: grid;
-  grid-template-rows: 2px 0fr;
-  transition: grid-template-rows 0.3s ease;
+  grid-template-rows: 3px 0fr;
+  transition: grid-template-rows 0.5s ease;
   min-width: 0;
   margin: 0;
   padding: 0;
 }
 
 .ct-comment.ct-has-children {
-  grid-template-rows: 2px 0fr auto;
+  grid-template-rows: 3px 0fr auto;
 }
 
 /* Card mode: top-level or parent is expanded */
 #ct-container > .ct-comment {
   grid-template-rows: 0px 1fr;
+  margin-bottom: 1px;
 }
 #ct-container > .ct-comment.ct-has-children {
   grid-template-rows: 0px 1fr auto;
 }
 .ct-expanded > .ct-children > .ct-comment {
   grid-template-rows: 0px 1fr;
+  margin-bottom: 1px;
 }
 .ct-expanded > .ct-children > .ct-comment.ct-has-children {
   grid-template-rows: 0px 1fr auto;
@@ -96,7 +98,7 @@
 }
 
 .ct-expanded > .ct-children {
-  padding-left: 43px;
+  padding-left: 40px;
 }
 
 @media (pointer: coarse) {
@@ -200,3 +202,74 @@
   font-size: 13px;
   color: #bbb;
 }
+
+/* ── Old Reddit layout ───────────────────────────────────── */
+
+/* Let container flow beside sidebar instead of below it */
+.commentarea #ct-container {
+  width: auto;
+  overflow: visible;
+  padding-left: 40px;
+  position: relative;
+}
+
+.commentarea #ct-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 40px;
+  background: linear-gradient(to right, rgba(150, 150, 150, 0.15), transparent);
+  z-index: 1;
+  transition: opacity 0.3s ease;
+}
+
+.commentarea #ct-container:hover::before {
+  opacity: 0;
+}
+
+/* Same indent collapsed and expanded — bars align with cards */
+.commentarea .ct-children {
+  padding-left: 40px;
+  border-left: 2px solid #f0ede6;
+}
+
+/* Vertical line alongside all card-mode comments on Reddit */
+.commentarea .ct-expanded > .ct-children > .ct-comment > .ct-comment-row,
+.commentarea #ct-container > .ct-comment > .ct-comment-row {
+  border-left: 2px solid #f0ede6 !important;
+}
+
+/* Remove Reddit's and RES's native comment borders */
+.commentarea #ct-container .entry,
+.commentarea #ct-container .comment,
+.commentarea #ct-container .thing {
+  border: none !important;
+  outline: none !important;
+}
+
+.commentarea #ct-container .ct-comment-row {
+  border-bottom: none;
+}
+
+/* ── Old Reddit resets ───────────────────────────────────── */
+
+/* Reddit's .entry has margin/padding we need to control */
+#ct-container .entry {
+  margin: 0;
+  padding: 4px 8px;
+  overflow: hidden;
+}
+
+/* Hide Reddit's native nesting indicators inside our tree */
+#ct-container .child,
+#ct-container .clearleft {
+  display: none;
+}
+
+/* Flatten Reddit's expand/collapse toggles */
+#ct-container .expand {
+  display: none;
+}
+

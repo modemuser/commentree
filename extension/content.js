@@ -8,11 +8,13 @@
   'use strict';
 
   const commentTree = document.querySelector('table.comment-tree');
-  if (!commentTree) return; // Not a thread page
+  const redditCommentArea = document.querySelector('.commentarea > .sitetable.nestedlisting');
 
-  // ── Parse flat HN comments into tree ────────────────────────
+  if (!commentTree && !redditCommentArea) return; // Not a thread page
 
-  function parseComments() {
+  // ── Parse HN flat comments into tree ────────────────────────
+
+  function parseHNComments() {
     const rows = commentTree.querySelectorAll('tr.athing.comtr');
     const flat = [];
 
@@ -62,6 +64,55 @@
     return roots;
   }
 
+  // ── Parse old Reddit nested comments into tree ──────────────
+
+  function parseRedditComments() {
+    const roots = [];
+    const topLevel = redditCommentArea.querySelectorAll(':scope > .thing');
+
+    for (const thing of topLevel) {
+      const item = parseRedditComment(thing);
+      if (item) roots.push(item);
+    }
+
+    return roots;
+  }
+
+  function parseRedditComment(thing) {
+    if (thing.dataset.type !== 'comment') return null;
+
+    const entry = thing.querySelector(':scope > .entry');
+    if (!entry) return null;
+
+    const bodyEl = entry.querySelector('.usertext-body .md');
+    const text = bodyEl?.innerHTML || null;
+    if (text == null) return null;
+
+    // Clone midcol (votes) + entry as row content
+    const rowNode = document.createElement('div');
+    rowNode.style.display = 'flex';
+    rowNode.style.alignItems = 'flex-start';
+    const midcol = thing.querySelector(':scope > .midcol');
+    if (midcol) rowNode.appendChild(midcol.cloneNode(true));
+    rowNode.appendChild(entry.cloneNode(true));
+
+    // Parse children
+    const children = [];
+    const childSitetable = thing.querySelector(':scope > .child > .sitetable');
+    if (childSitetable) {
+      for (const childThing of childSitetable.querySelectorAll(':scope > .thing')) {
+        const child = parseRedditComment(childThing);
+        if (child) children.push(child);
+      }
+    }
+
+    // Extract score for bar intensity
+    const scoreEl = entry.querySelector('.score.unvoted');
+    const score = scoreEl ? parseInt(scoreEl.getAttribute('title') || '0', 10) : 0;
+
+    return { rowNode, text, children, score };
+  }
+
   // ── Render nested comments with bar↔card grid ─────────────
 
   function renderComment(item) {
@@ -70,10 +121,12 @@
     const wrapper = document.createElement('div');
     wrapper.className = 'ct-comment';
 
-    // Bar: thin colored strip visible when comment is collapsed
+    // Bar: thin colored strip — darkness from text length + upvotes
     const bar = document.createElement('div');
     bar.className = 'ct-comment-bar';
-    const intensity = 0.06 + Math.min(Math.sqrt(item.text.length) * 0.008, 0.3);
+    const textFactor = Math.min(Math.sqrt(item.text.length) * 0.01, 0.25);
+    const scoreFactor = item.score ? Math.min(Math.sqrt(item.score) * 0.015, 0.3) : 0;
+    const intensity = 0.08 + textFactor + scoreFactor;
     bar.style.background = `rgba(0, 0, 0, ${intensity})`;
     wrapper.appendChild(bar);
 
@@ -104,7 +157,7 @@
 
   // ── Replace comment tree ────────────────────────────────────
 
-  const comments = parseComments();
+  const comments = commentTree ? parseHNComments() : parseRedditComments();
 
   const container = document.createElement('div');
   container.id = 'ct-container';
@@ -114,12 +167,12 @@
     if (el) container.appendChild(el);
   }
 
-  commentTree.replaceWith(container);
+  (commentTree || redditCommentArea).replaceWith(container);
 
   // ── Interactions (expand/collapse) ──────────────────────────
 
   const COLLAPSE_DELAY = 400;
-  const EXPAND_DELAY = 150;
+  const EXPAND_DELAY = 200;
   const STAGGER_DELAY = 80;
 
   let scrollFloor = 0;
@@ -137,13 +190,6 @@
 
   const collapseTimers = new Map();
   let pendingExpand = null;
-  let mouseX = -1, mouseY = -1;
-
-  document.addEventListener('mousemove', (e) => {
-    mouseX = e.clientX;
-    mouseY = e.clientY;
-  });
-
   function outermostUnexpanded(comment) {
     let target = comment;
     while (target) {
@@ -152,16 +198,6 @@
       target = parent;
     }
     return target?.classList.contains('ct-has-children') && !target.classList.contains('ct-expanded') ? target : null;
-  }
-
-  function scheduleNextLevel(expandedComment) {
-    const el = document.elementFromPoint(mouseX, mouseY);
-    if (!el || !expandedComment.contains(el)) return;
-    const inner = el.closest('.ct-comment');
-    if (!inner) return;
-    const next = outermostUnexpanded(inner);
-    if (!next || !expandedComment.contains(next)) return;
-    scheduleExpand(next);
   }
 
   function scheduleExpand(comment) {
@@ -173,7 +209,6 @@
     const timer = setTimeout(() => {
       pendingExpand = null;
       comment.classList.add('ct-expanded');
-      requestAnimationFrame(() => scheduleNextLevel(comment));
     }, EXPAND_DELAY);
     pendingExpand = { comment, timer };
   }
@@ -419,6 +454,7 @@
       overlay.innerHTML = `
         <div class="ct-onboard-content">
           <p class="ct-onboard-title">commentree</p>
+          <p>A hover-based UX experiment to help read large nested comment trees.</p>
           <p>Tap a comment to expand its reply tree.</p>
           <p>Tap again to collapse.</p>
           <p class="ct-onboard-author">by <a href="https://news.ycombinator.com/user?id=modemuser" target="_blank">modemuser</a></p>
@@ -432,7 +468,8 @@
       overlay.innerHTML = `
         <div class="ct-onboard-content">
           <p class="ct-onboard-title">commentree</p>
-          <p>Explore and read comment trees with your mouse cursor, hover to expand.</p>
+          <p>A hover-based UX experiment to help read large nested comment trees.</p>
+          <p>Explore with your mouse cursor, hover to expand.</p>
           <p>Each line represents a comment — darker lines mean longer comments.</p>
           <p>Best to interact with the tree from the left.</p>
           <p class="ct-onboard-author">by <a href="https://news.ycombinator.com/user?id=modemuser" target="_blank">modemuser</a></p>

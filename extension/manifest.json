@@ -5,7 +5,11 @@
   "description": "Hacker News with tree previews",
   "content_scripts": [
     {
-      "matches": ["*://news.ycombinator.com/item*"],
+      "matches": [
+        "*://news.ycombinator.com/item*",
+        "*://old.reddit.com/r/*/comments/*",
+        "*://www.reddit.com/r/*/comments/*"
+      ],
       "css": ["style.css"],
       "js": ["content.js"],
       "run_at": "document_idle"
