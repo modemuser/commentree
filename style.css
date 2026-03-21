@@ -62,6 +62,29 @@ body {
   text-decoration: underline;
 }
 
+/* Info button */
+.info-btn {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid #ddd;
+  background: #fff;
+  color: #999;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  z-index: 100;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.info-btn:hover {
+  color: #ff6600;
+  border-color: #ff6600;
+}
+
 /* Front page story list */
 .story-list-item {
   display: flex;
@@ -267,7 +290,7 @@ body {
 }
 
 .expanded > .comment-children {
-  padding-left: 43px;
+  padding-left: 40px;
 }
 
 @media (pointer: coarse) {
@@ -276,8 +299,33 @@ body {
     padding: 0;
   }
 
+  .comment-content {
+    padding: 6px 8px;
+  }
+
+  .comment-children {
+    padding-left: 4px;
+  }
+
   .expanded > .comment-children {
-    padding-left: 6px;
+    padding-left: 12px;
+  }
+}
+
+/* Pinned comment */
+.comment.pinned > .comment-row {
+  border-left: 3px solid #ff6600;
+  background: #fff5eb;
+}
+
+/* Pinned ancestor — subtle indicator */
+.comment.pinned-ancestor > .comment-row {
+  border-left: 3px solid #ffd9b3;
+}
+
+@media (pointer: fine) {
+  .comment.expanded.has-children > .comment-row {
+    cursor: pointer;
   }
 }
 
@@ -310,6 +358,21 @@ body {
   font-weight: 700;
   color: #ff6600;
   margin-bottom: 12px;
+}
+
+.onboard-author {
+  margin-top: 16px;
+  font-size: 12px;
+  color: #bbb;
+}
+
+.onboard-author a {
+  color: #ff6600;
+  text-decoration: none;
+}
+
+.onboard-author a:hover {
+  text-decoration: underline;
 }
 
 .onboard-dismiss {
