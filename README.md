@@ -100,23 +100,34 @@ The content script runs at `document_idle` on HN item pages. It parses HN's flat
 
 All CSS classes are prefixed `ct-` to avoid collisions with HN's styles. A scoped `box-sizing: border-box` reset prevents HN's default `content-box` from causing layout overflow.
 
-## Standalone app
+## Live demo
+
+**https://commentree.acxx.workers.dev**
+
+Open any HN thread by ID: `https://commentree.acxx.workers.dev?id=47440430`
+
+The front page shows current top stories.
+
+### Run locally
 
 ```bash
-# Serve locally
 python3 -m http.server 8080
-
-# Open any HN thread
-open "http://localhost:8080?id=47440430"
+open "http://localhost:8080"
 ```
 
-Pass any HN item ID as the `?id=` query parameter. The front page shows current top stories.
+### Deploy
+
+```bash
+./deploy.sh
+```
+
+Deploys to Cloudflare Workers via wrangler.
 
 ## File structure
 
 ```
-index.html            Standalone app entry point
-style.css             Standalone app styles
+index.html            App entry point
+style.css             App styles
 js/
   main.js             Orchestrator — fetch, render, routing
   api.js              Algolia HN API fetch
@@ -127,6 +138,8 @@ extension/
   manifest.json       Chrome MV3 manifest
   content.js          Content script — DOM parsing, rendering, interactions
   style.css           Extension-only styles (ct- prefixed)
+deploy.sh             Build dist/ and deploy to Cloudflare Workers
+wrangler.json         Cloudflare Workers config
 ```
 
 ## Design decisions
