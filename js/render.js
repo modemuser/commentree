@@ -76,6 +76,26 @@ export function renderComment(item, depth = 0) {
   return comment;
 }
 
+const _pendingCanvases = [];
+
+function _flushCanvases() {
+  // Measure all widths first (read pass) — prevents cascading growth
+  const items = _pendingCanvases.splice(0);
+  const widths = items.map(({ wrapper }) => wrapper.offsetWidth || 300);
+  // Then paint all (write pass)
+  for (let i = 0; i < items.length; i++) {
+    const { canvas, bars } = items[i];
+    canvas._displayWidth = widths[i];
+    paintTreeCanvas(canvas, bars);
+  }
+}
+
+export function flushTreeCanvases() {
+  if (_pendingCanvases.length > 0) {
+    requestAnimationFrame(_flushCanvases);
+  }
+}
+
 /**
  * Render compact tree preview — canvas with bars for each descendant.
  */
@@ -112,11 +132,8 @@ function renderTreePreview(children) {
   canvas.className = 'tree-canvas';
   wrapper.appendChild(canvas);
 
-  // Paint once visible so we can measure width
-  requestAnimationFrame(() => {
-    canvas._displayWidth = wrapper.offsetWidth || 300;
-    paintTreeCanvas(canvas, bars);
-  });
+  // Queue for batch painting (avoids cascading width growth)
+  _pendingCanvases.push({ canvas, wrapper, bars });
 
   return wrapper;
 }
@@ -133,7 +150,6 @@ function paintTreeCanvas(canvas, bars) {
 
   canvas.width = w * 2;
   canvas.height = h * 2;
-  canvas.style.width = `${w}px`;
   canvas.style.height = `${h}px`;
 
   const ctx = canvas.getContext('2d');

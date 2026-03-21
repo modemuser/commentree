@@ -1,5 +1,5 @@
 import { fetchThread, fetchFrontPage } from './api.js';
-import { renderStory, renderComment, renderFrontPage } from './render.js';
+import { renderStory, renderComment, renderFrontPage, flushTreeCanvases } from './render.js';
 import { setupInteractions } from './interact.js';
 import { setupOnboarding } from './onboard.js';
 
@@ -43,6 +43,7 @@ async function loadThread(threadId) {
       if (el) container.appendChild(el);
     }
 
+    flushTreeCanvases();
     setupInteractions();
     setupOnboarding();
     document.title = `${story.title} — commentree`;

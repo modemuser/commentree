@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "commentree",
+  "version": "1.0",
+  "description": "Hacker News with tree previews",
+  "content_scripts": [
+    {
+      "matches": ["*://news.ycombinator.com/item*"],
+      "css": ["style.css"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
