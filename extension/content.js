@@ -136,59 +136,60 @@
   });
 
   const collapseTimers = new Map();
-  const expandTimers = new Map();
+  let pendingExpand = null;
   let mouseX = -1, mouseY = -1;
-  let expandedAtX = -1, expandedAtY = -1;
 
   document.addEventListener('mousemove', (e) => {
     mouseX = e.clientX;
     mouseY = e.clientY;
   });
 
-  function mouseMoved() {
-    return mouseX !== expandedAtX || mouseY !== expandedAtY;
+  function outermostUnexpanded(comment) {
+    let target = comment;
+    while (target) {
+      const parent = target.parentElement?.closest('.ct-comment');
+      if (!parent || parent.classList.contains('ct-expanded')) break;
+      target = parent;
+    }
+    return target?.classList.contains('ct-has-children') && !target.classList.contains('ct-expanded') ? target : null;
   }
 
-  function markExpanded() {
-    expandedAtX = mouseX;
-    expandedAtY = mouseY;
+  function scheduleNextLevel(expandedComment) {
+    const el = document.elementFromPoint(mouseX, mouseY);
+    if (!el || !expandedComment.contains(el)) return;
+    const inner = el.closest('.ct-comment');
+    if (!inner) return;
+    const next = outermostUnexpanded(inner);
+    if (!next || !expandedComment.contains(next)) return;
+    scheduleExpand(next);
+  }
+
+  function scheduleExpand(comment) {
+    if (pendingExpand && pendingExpand.comment === comment) return;
+    if (pendingExpand) {
+      clearTimeout(pendingExpand.timer);
+      pendingExpand = null;
+    }
+    const timer = setTimeout(() => {
+      pendingExpand = null;
+      comment.classList.add('ct-expanded');
+      requestAnimationFrame(() => scheduleNextLevel(comment));
+    }, EXPAND_DELAY);
+    pendingExpand = { comment, timer };
   }
 
   document.addEventListener('mouseover', (e) => {
     const row = e.target.closest?.('.ct-comment-row');
     const childrenArea = !row && e.target.closest?.('.ct-children');
     if (!row && !childrenArea) return;
-    let comment = row ? row.parentElement : childrenArea.parentElement;
-
-    // Walk up from bar-mode comments to the first card-mode ancestor
-    while (comment) {
-      const parent = comment.parentElement?.closest('.ct-comment');
-      if (!parent || parent.classList.contains('ct-expanded')) break;
-      comment = parent;
-    }
+    const comment = row ? row.parentElement : childrenArea.parentElement;
     if (!comment) return;
 
     cancelCollapseChain(comment, collapseTimers);
 
-    if (comment.classList.contains('ct-has-children') &&
-        !comment.classList.contains('ct-expanded') &&
-        !expandTimers.has(comment)) {
-      const timer = setTimeout(() => {
-        expandTimers.delete(comment);
-        if (!mouseMoved()) return;
-        markExpanded();
-        comment.classList.add('ct-expanded');
-      }, EXPAND_DELAY);
-      expandTimers.set(comment, timer);
-    } else if (comment.classList.contains('ct-expanded') && mouseMoved()) {
-      // Open comment — expand only the child under the cursor
-      const el = document.elementFromPoint(mouseX, mouseY);
-      if (!el) return;
-      const child = el.closest('.ct-comment.ct-has-children:not(.ct-expanded)');
-      if (!child || child.parentElement?.closest('.ct-comment') !== comment) return;
-      markExpanded();
-      cancelCollapseChain(child, collapseTimers);
-      child.classList.add('ct-expanded');
+    const target = outermostUnexpanded(comment);
+    if (target) {
+      scheduleExpand(target);
     }
   });
 
@@ -199,9 +200,9 @@
     const related = e.relatedTarget;
     if (related && comment.contains(related)) return;
 
-    if (expandTimers.has(comment)) {
-      clearTimeout(expandTimers.get(comment));
-      expandTimers.delete(comment);
+    if (pendingExpand && pendingExpand.comment === comment) {
+      clearTimeout(pendingExpand.timer);
+      pendingExpand = null;
     }
 
     scheduleCollapse(comment, collapseTimers);
@@ -292,8 +293,10 @@
 
   // Collapse all on mouseleave
   container.addEventListener('mouseleave', () => {
-    for (const [, timer] of expandTimers) clearTimeout(timer);
-    expandTimers.clear();
+    if (pendingExpand) {
+      clearTimeout(pendingExpand.timer);
+      pendingExpand = null;
+    }
 
     const expanded = [];
     container.querySelectorAll('.ct-comment.ct-expanded:not(.ct-pinned):not(.ct-pinned-ancestor)').forEach(el => {
