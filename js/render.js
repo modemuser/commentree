@@ -22,7 +22,9 @@ export function renderStory(story) {
 
 /**
  * Recursively render a comment and all its descendants.
- * Children are nested inside, controlled by JS expand/collapse.
+ * Each comment is a grid: bar (2px) | row (0fr) | children.
+ * Bar mode shows a thin colored strip; card mode shows full content.
+ * The transition between modes is driven by CSS grid-template-rows.
  */
 export function renderComment(item, depth = 0) {
   if (!item || item.text == null) return null;
@@ -30,10 +32,14 @@ export function renderComment(item, depth = 0) {
   const comment = document.createElement('div');
   comment.className = 'comment';
 
-  // Row: content + tree preview
-  const row = document.createElement('div');
-  row.className = 'comment-row';
+  // Bar: thin colored strip visible when comment is collapsed
+  const bar = document.createElement('div');
+  bar.className = 'comment-bar';
+  const intensity = 0.06 + Math.min(Math.sqrt(item.text.length) * 0.008, 0.3);
+  bar.style.background = `rgba(0, 0, 0, ${intensity})`;
+  comment.appendChild(bar);
 
+  // Row: comment content
   const content = document.createElement('div');
   content.className = 'comment-content';
   content.innerHTML = `
@@ -44,132 +50,28 @@ export function renderComment(item, depth = 0) {
     <div class="comment-body">${item.text}</div>
   `;
 
+  const row = document.createElement('div');
+  row.className = 'comment-row';
   row.appendChild(content);
   comment.appendChild(row);
 
   const validChildren = (item.children || []).filter(c => c.text != null);
 
-  // Children container
   if (validChildren.length > 0) {
-    // Tree preview strip below comment row
-    const preview = renderTreePreview(validChildren);
-    preview.classList.add('tree-preview');
-    comment.appendChild(preview);
+    comment.classList.add('has-children');
 
     const childrenContainer = document.createElement('div');
     childrenContainer.className = 'comment-children';
 
-    const childrenInner = document.createElement('div');
-    childrenInner.className = 'comment-children-inner';
-
     for (const child of validChildren) {
       const childEl = renderComment(child, depth + 1);
-      if (childEl) childrenInner.appendChild(childEl);
+      if (childEl) childrenContainer.appendChild(childEl);
     }
 
-    childrenContainer.appendChild(childrenInner);
     comment.appendChild(childrenContainer);
-
-    comment.classList.add('has-children');
   }
 
   return comment;
-}
-
-const _pendingCanvases = [];
-
-function _flushCanvases() {
-  // Measure all widths first (read pass) — prevents cascading growth
-  const items = _pendingCanvases.splice(0);
-  const widths = items.map(({ wrapper }) => wrapper.offsetWidth || 300);
-  // Then paint all (write pass)
-  for (let i = 0; i < items.length; i++) {
-    const { canvas, bars } = items[i];
-    canvas._displayWidth = widths[i];
-    paintTreeCanvas(canvas, bars);
-  }
-}
-
-export function flushTreeCanvases() {
-  if (_pendingCanvases.length > 0) {
-    requestAnimationFrame(_flushCanvases);
-  }
-}
-
-/**
- * Render compact tree preview — canvas with bars for each descendant.
- */
-function renderTreePreview(children) {
-  const wrapper = document.createElement('div');
-  wrapper.className = 'tree-preview';
-
-  const bars = []; // { depth, descendants, textLen }
-
-  function countDescendants(item) {
-    let count = 0;
-    for (const c of item.children || []) {
-      if (c.text == null) continue;
-      count += 1 + countDescendants(c);
-    }
-    return count;
-  }
-
-  function collectBars(items, depth) {
-    for (const item of items) {
-      if (item.text == null) continue;
-      const validChildren = (item.children || []).filter(c => c.text != null);
-      bars.push({ depth, descendants: countDescendants(item), textLen: item.text.length });
-      if (validChildren.length > 0) {
-        collectBars(validChildren, depth + 1);
-      }
-    }
-  }
-
-  collectBars(children, 0);
-  if (bars.length === 0) return wrapper;
-
-  const canvas = document.createElement('canvas');
-  canvas.className = 'tree-canvas';
-  wrapper.appendChild(canvas);
-
-  // Queue for batch painting (avoids cascading width growth)
-  _pendingCanvases.push({ canvas, wrapper, bars });
-
-  return wrapper;
-}
-
-/**
- * Paint/repaint a tree canvas as a wide horizontal strip with vertical fade.
- */
-function paintTreeCanvas(canvas, bars) {
-  const barH = 2;
-  const maxH = 24;
-  const scale = bars.length * barH > maxH ? maxH / (bars.length * barH) : 1;
-  const w = canvas._displayWidth || 200;
-  const h = Math.min(maxH, Math.ceil(bars.length * barH));
-
-  canvas.width = w * 2;
-  canvas.height = h * 2;
-  canvas.style.height = `${h}px`;
-
-  const ctx = canvas.getContext('2d');
-  ctx.scale(2, 2);
-
-  for (let i = 0; i < bars.length; i++) {
-    const { depth, descendants, textLen } = bars[i];
-    const indent = depth * 6;
-    const barW = w - indent;
-    const x = indent;
-    const y = i * barH * scale;
-
-    const barHeight = Math.max(1, barH * scale - 0.5);
-
-    // Continuous darkening: text length dominates, descendants add a hint
-    const intensity = 0.12 + Math.sqrt(textLen) * 0.006 + Math.sqrt(descendants) * 0.07;
-
-    ctx.fillStyle = `rgba(0, 0, 0, ${intensity})`;
-    ctx.fillRect(x, y, barW, barHeight);
-  }
 }
 
 /**

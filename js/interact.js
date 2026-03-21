@@ -25,9 +25,10 @@ export function setupInteractions() {
   const expandTimers = new Map();
 
   document.addEventListener('mouseover', (e) => {
-    const trigger = e.target.closest?.('.comment-row') || e.target.closest?.('.tree-preview');
-    if (!trigger) return;
-    const comment = trigger.parentElement;
+    const row = e.target.closest?.('.comment-row');
+    const childrenArea = !row && e.target.closest?.('.comment-children');
+    if (!row && !childrenArea) return;
+    const comment = row ? row.parentElement : childrenArea.parentElement;
     if (!comment?.classList.contains('has-children')) return;
 
     cancelCollapseChain(comment, collapseTimers);
@@ -56,7 +57,7 @@ export function setupInteractions() {
     scheduleCollapse(comment, collapseTimers);
   });
 
-  // Touch: tap comment row to toggle, tap tree preview to expand
+  // Touch: tap comment row or bars to toggle
   const isTouch = matchMedia('(pointer: coarse)').matches;
 
   if (isTouch) {
@@ -64,10 +65,10 @@ export function setupInteractions() {
       // Don't intercept link clicks
       if (e.target.closest('a')) return;
 
-      // Tap tree preview to expand parent comment
-      const preview = e.target.closest?.('.tree-preview');
-      if (preview) {
-        const comment = preview.parentElement;
+      // Tap bars area to expand parent comment
+      const childrenArea = e.target.closest?.('.comment-children');
+      if (childrenArea) {
+        const comment = childrenArea.parentElement;
         if (comment?.classList.contains('has-children') && !comment.classList.contains('expanded')) {
           comment.classList.add('expanded');
           return;
@@ -169,6 +170,11 @@ function beginCollapse() {
 }
 
 function collapseSingle(comment) {
+  // Always strip expanded from all descendants first
+  comment.querySelectorAll('.expanded').forEach(desc => {
+    desc.classList.remove('expanded');
+  });
+
   const row = comment.querySelector(':scope > .comment-row');
   if (!row) return;
 

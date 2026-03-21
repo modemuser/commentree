@@ -147,17 +147,41 @@ body {
   margin-top: 4px;
 }
 
-/* Comment */
+/* Comment — grid: bar | row | children
+   Default is "bar mode" (thin strip). Becomes "card mode" when
+   parent is expanded or comment is top-level. */
 .comment {
-  position: relative;
+  display: grid;
+  grid-template-rows: 2px 0fr;
+  transition: grid-template-rows 0.3s ease;
   min-width: 0;
+}
+
+.comment.has-children {
+  grid-template-rows: 2px 0fr auto;
+}
+
+/* Card mode: top-level or parent is expanded */
+#container > .comment {
+  grid-template-rows: 0px 1fr;
+}
+#container > .comment.has-children {
+  grid-template-rows: 0px 1fr auto;
+}
+.expanded > .comment-children > .comment {
+  grid-template-rows: 0px 1fr;
+}
+.expanded > .comment-children > .comment.has-children {
+  grid-template-rows: 0px 1fr auto;
+}
+
+/* Bar: the thin colored strip representing a collapsed comment */
+.comment-bar {
+  min-height: 0;
   overflow: hidden;
 }
 
-.comment:not(.has-children) {
-  margin-bottom: 3px;
-}
-
+/* Row: comment content, hidden by grid 0fr track */
 .comment-row {
   display: flex;
   align-items: stretch;
@@ -165,6 +189,8 @@ body {
   background: #fff;
   border-bottom: 1px solid #f0ede6;
   transition: background 0.15s ease;
+  overflow: hidden;
+  min-height: 0;
 }
 
 .comment.expanded > .comment-row,
@@ -231,46 +257,17 @@ body {
   border-radius: 2px;
 }
 
-/* Tree preview strip below comment */
-.tree-preview {
-  overflow: hidden;
-  cursor: pointer;
-  transition: opacity 0.2s ease, max-height 0.3s ease;
-  max-height: 30px;
-  opacity: 1;
-  padding-left: 9px;
-  border-left: 2px solid #f0ede6;
-}
-
-.tree-canvas {
-  display: block;
-  width: 100%;
-}
-
-.comment.expanded > .tree-preview {
-  max-height: 0;
-  opacity: 0;
-}
-
-
 /* Children container */
 .comment-children {
-  display: grid;
-  grid-template-rows: 0fr;
-  opacity: 0;
-  transition: grid-template-rows 0.3s ease, opacity 0.2s ease;
-  padding-left: 43px;
+  padding-left: 6px;
   border-left: 2px solid #f0ede6;
-}
-
-.comment-children-inner {
-  overflow: hidden;
   min-height: 0;
+  overflow: hidden;
+  transition: padding-left 0.3s ease;
 }
 
-.comment.expanded > .comment-children {
-  grid-template-rows: 1fr;
-  opacity: 1;
+.expanded > .comment-children {
+  padding-left: 43px;
 }
 
 /* Onboarding overlay */
