@@ -3,7 +3,7 @@
  */
 
 const COLLAPSE_DELAY = 400;
-const EXPAND_DELAY = 150;
+const EXPAND_DELAY = 200;
 const STAGGER_DELAY = 80;
 
 // Scroll floor: prevents viewport from jumping up during collapses
@@ -18,12 +18,6 @@ window.addEventListener('scroll', () => {
     const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
     window.scrollTo(0, Math.min(scrollFloor, maxScroll));
   }
-});
-
-let mouseX = -1, mouseY = -1;
-document.addEventListener('mousemove', (e) => {
-  mouseX = e.clientX;
-  mouseY = e.clientY;
 });
 
 export function setupInteractions() {
@@ -41,17 +35,6 @@ export function setupInteractions() {
     return target?.classList.contains('has-children') && !target.classList.contains('expanded') ? target : null;
   }
 
-  // Schedule expanding the next level in, if mouse is still in the area
-  function scheduleNextLevel(expandedComment) {
-    const el = document.elementFromPoint(mouseX, mouseY);
-    if (!el || !expandedComment.contains(el)) return;
-    const inner = el.closest('.comment');
-    if (!inner) return;
-    const next = outermostUnexpanded(inner);
-    if (!next || !expandedComment.contains(next)) return;
-    scheduleExpand(next);
-  }
-
   function scheduleExpand(comment) {
     if (pendingExpand && pendingExpand.comment === comment) return;
     if (pendingExpand) {
@@ -61,8 +44,6 @@ export function setupInteractions() {
     const timer = setTimeout(() => {
       pendingExpand = null;
       comment.classList.add('expanded');
-      // After expanding, try the next level in
-      requestAnimationFrame(() => scheduleNextLevel(comment));
     }, EXPAND_DELAY);
     pendingExpand = { comment, timer };
   }
@@ -77,9 +58,7 @@ export function setupInteractions() {
     cancelCollapseChain(comment, collapseTimers);
 
     const target = outermostUnexpanded(comment);
-    if (target) {
-      scheduleExpand(target);
-    }
+    if (target) scheduleExpand(target);
   });
 
   document.addEventListener('mouseout', (e) => {

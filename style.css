@@ -173,26 +173,32 @@ body {
 /* Comment — grid: bar | row | children
    Default is "bar mode" (thin strip). Becomes "card mode" when
    parent is expanded or comment is top-level. */
+:root {
+  --bar-height: 2px;
+}
+
 .comment {
   display: grid;
-  grid-template-rows: 2px 0fr;
-  transition: grid-template-rows 0.3s ease;
+  grid-template-rows: var(--bar-height) 0fr;
+  transition: grid-template-rows 0.5s ease;
   min-width: 0;
 }
 
 .comment.has-children {
-  grid-template-rows: 2px 0fr auto;
+  grid-template-rows: var(--bar-height) 0fr auto;
 }
 
 /* Card mode: top-level or parent is expanded */
 #container > .comment {
   grid-template-rows: 0px 1fr;
+  margin-bottom: 1px;
 }
 #container > .comment.has-children {
   grid-template-rows: 0px 1fr auto;
 }
 .expanded > .comment-children > .comment {
   grid-template-rows: 0px 1fr;
+  margin-bottom: 1px;
 }
 .expanded > .comment-children > .comment.has-children {
   grid-template-rows: 0px 1fr auto;
@@ -202,6 +208,7 @@ body {
 .comment-bar {
   min-height: 0;
   overflow: hidden;
+  margin-bottom: 0.5px;
 }
 
 /* Row: comment content, hidden by grid 0fr track */
@@ -210,10 +217,15 @@ body {
   align-items: stretch;
   gap: 0;
   background: #fff;
-  border-bottom: 1px solid #f0ede6;
   transition: background 0.15s ease;
   overflow: hidden;
   min-height: 0;
+}
+
+/* Border only in card mode */
+#container > .comment > .comment-row,
+.expanded > .comment-children > .comment > .comment-row {
+  border-bottom: 1px solid #f0ede6;
 }
 
 .comment.expanded > .comment-row,
