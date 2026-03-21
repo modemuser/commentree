@@ -25,9 +25,9 @@ export function setupInteractions() {
   const expandTimers = new Map();
 
   document.addEventListener('mouseover', (e) => {
-    const row = e.target.closest?.('.comment-row');
-    if (!row) return;
-    const comment = row.parentElement;
+    const trigger = e.target.closest?.('.comment-row') || e.target.closest?.('.tree-preview');
+    if (!trigger) return;
+    const comment = trigger.parentElement;
     if (!comment?.classList.contains('has-children')) return;
 
     cancelCollapseChain(comment, collapseTimers);

@@ -243,9 +243,9 @@
   const expandTimers = new Map();
 
   document.addEventListener('mouseover', (e) => {
-    const row = e.target.closest?.('.ct-comment-row');
-    if (!row) return;
-    const comment = row.parentElement;
+    const trigger = e.target.closest?.('.ct-comment-row') || e.target.closest?.('.ct-tree-preview');
+    if (!trigger) return;
+    const comment = trigger.parentElement;
     if (!comment?.classList.contains('ct-has-children')) return;
 
     cancelCollapseChain(comment, collapseTimers);
@@ -412,101 +412,48 @@
 
   const ONBOARD_KEY = 'commentree_onboarded';
 
-  if (!sessionStorage.getItem(ONBOARD_KEY)) {
-    sessionStorage.setItem(ONBOARD_KEY, '1');
+  if (true /* !sessionStorage.getItem(ONBOARD_KEY) */) {
+    // sessionStorage.setItem(ONBOARD_KEY, '1');
 
-    const hint = document.createElement('div');
-    hint.className = 'ct-onboard-hint';
-    hint.textContent = 'move cursor here';
-    document.body.appendChild(hint);
+    const isTouch = matchMedia('(pointer: coarse)').matches;
+    const overlay = document.createElement('div');
+    overlay.className = 'ct-onboard-overlay';
 
-    requestAnimationFrame(() => {
-      setTimeout(() => hint.classList.add('ct-visible'), 800);
-    });
-
-    function positionHint() {
-      const rect = container.getBoundingClientRect();
-      hint.style.left = rect.left / 2 + 'px';
-    }
-    positionHint();
-    window.addEventListener('resize', positionHint);
-
-    let phase = 1;
-    let arrows = [];
-
-    function showArrows() {
-      const topComments = container.querySelectorAll(':scope > .ct-comment.ct-has-children > .ct-comment-row');
-      for (const row of topComments) {
-        const arrow = document.createElement('div');
-        arrow.className = 'ct-onboard-arrow';
-        arrow.textContent = '\u2192';
-        const rect = row.getBoundingClientRect();
-        arrow.style.top = (rect.top + window.scrollY + rect.height / 2 - 16) + 'px';
-        arrow.style.left = (rect.left - 40) + 'px';
-        document.body.appendChild(arrow);
-        arrows.push(arrow);
-      }
-    }
-
-    function removeArrows() {
-      for (const a of arrows) a.remove();
-      arrows = [];
-    }
-
-    function dismiss() {
-      document.querySelectorAll('.ct-onboard-hint').forEach(el => {
-        el.classList.add('ct-slow-fade');
-        el.classList.remove('ct-visible');
-        setTimeout(() => el.remove(), 1600);
+    if (isTouch) {
+      overlay.innerHTML = `
+        <div class="ct-onboard-content">
+          <p class="ct-onboard-title">commentree</p>
+          <p>Tap a comment to expand its reply tree.</p>
+          <p>Tap again to collapse.</p>
+          <p class="ct-onboard-dismiss">tap anywhere to start</p>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+      requestAnimationFrame(() => overlay.classList.add('ct-visible'));
+      overlay.addEventListener('click', () => {
+        overlay.classList.remove('ct-visible');
+        setTimeout(() => overlay.remove(), 500);
       });
-      removeArrows();
-      document.removeEventListener('mousemove', onMove);
-      window.removeEventListener('resize', positionHint);
-      observer.disconnect();
-    }
+    } else {
+      overlay.innerHTML = `
+        <div class="ct-onboard-content">
+          <p class="ct-onboard-title">commentree</p>
+          <p>Navigate the comment tree with your cursor.</p>
+          <p>Move to the left margin to expand replies.</p>
+          <p class="ct-onboard-dismiss">move your cursor to the left to begin</p>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+      requestAnimationFrame(() => overlay.classList.add('ct-visible'));
 
-    function onMove(e) {
-      if (phase === 1) {
+      document.addEventListener('mousemove', function onMove(e) {
         const rect = container.getBoundingClientRect();
-        if (rect.left > 40 && e.clientX < rect.left) {
-          phase = 2;
-
-          const hint2 = document.createElement('div');
-          hint2.className = 'ct-onboard-hint';
-          hint2.textContent = 'expand comment trees';
-          hint2.style.left = hint.style.left;
-          document.body.appendChild(hint2);
-          requestAnimationFrame(() => hint2.classList.add('ct-visible'));
-
-          hint.classList.remove('ct-visible');
-          setTimeout(() => hint.remove(), 1200);
-
-          setTimeout(() => {
-            hint2.classList.add('ct-slow-fade');
-            hint2.classList.remove('ct-visible');
-            setTimeout(() => hint2.remove(), 1600);
-          }, 2500);
-
-          showArrows();
+        if (e.clientX < rect.left) {
+          overlay.classList.remove('ct-visible');
+          setTimeout(() => overlay.remove(), 500);
+          document.removeEventListener('mousemove', onMove);
         }
-      }
+      });
     }
-
-    document.addEventListener('mousemove', onMove);
-
-    const observer = new MutationObserver((mutations) => {
-      for (const m of mutations) {
-        if (m.target.classList?.contains('ct-expanded')) {
-          dismiss();
-          return;
-        }
-      }
-    });
-
-    observer.observe(container, {
-      attributes: true,
-      attributeFilter: ['class'],
-      subtree: true,
-    });
   }
 })();

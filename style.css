@@ -259,7 +259,7 @@ body {
   grid-template-rows: 0fr;
   opacity: 0;
   transition: grid-template-rows 0.3s ease, opacity 0.2s ease;
-  padding-left: 32px;
+  padding-left: 43px;
   border-left: 2px solid #f0ede6;
 }
 
@@ -273,46 +273,39 @@ body {
   opacity: 1;
 }
 
-/* Onboarding */
-.onboard-hint {
+/* Onboarding overlay */
+.onboard-overlay {
   position: fixed;
-  top: 50%;
-  left: 0;
-  transform: translateX(-50%) translateY(-50%) rotate(-90deg);
-  font-size: 48px;
-  font-weight: 800;
-  color: #ccc;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  pointer-events: none;
+  inset: 0;
+  background: rgba(246, 246, 239, 0.92);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   opacity: 0;
-  transition: opacity 1s ease;
-  white-space: nowrap;
-  z-index: 100;
+  transition: opacity 0.4s ease;
 }
 
-.onboard-hint.visible {
+.onboard-overlay.visible {
   opacity: 1;
 }
 
-.onboard-hint.slow-fade {
-  transition: opacity 1.5s ease;
-  opacity: 0;
+.onboard-overlay-content {
+  text-align: center;
+  color: #666;
+  font-size: 16px;
+  line-height: 2;
 }
 
-/* Phase 2: arrows fly in from left and fade at cards */
-.onboard-arrow {
-  position: absolute;
-  font-size: 28px;
+.onboard-title {
+  font-size: 24px;
   font-weight: 700;
-  color: #999;
-  pointer-events: none;
-  animation: onboard-fly 2s ease-in forwards;
-  z-index: 100;
+  color: #ff6600;
+  margin-bottom: 12px;
 }
 
-@keyframes onboard-fly {
-  0% { transform: translateX(-60px); opacity: 0; }
-  30% { opacity: 1; }
-  100% { transform: translateX(40px); opacity: 0; }
+.onboard-dismiss {
+  margin-top: 24px;
+  font-size: 13px;
+  color: #bbb;
 }
