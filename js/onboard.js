@@ -32,6 +32,7 @@ function showOverlay(container, isTouch) {
     overlay.innerHTML = `
       <div class="onboard-overlay-content">
         <p class="onboard-title">commentree</p>
+        <p>A hover-based UX experiment to help read large nested comment trees.</p>
         <p>Tap a comment to expand its reply tree.</p>
         <p>Tap again to collapse.</p>
         <p class="onboard-author">by <a href="https://news.ycombinator.com/user?id=modemuser" target="_blank">modemuser</a></p>
@@ -45,7 +46,8 @@ function showOverlay(container, isTouch) {
     overlay.innerHTML = `
       <div class="onboard-overlay-content">
         <p class="onboard-title">commentree</p>
-        <p>Explore and read comment trees with your mouse cursor, hover to expand.</p>
+        <p>A hover-based UX experiment to help read large nested comment trees.</p>
+        <p>Explore with your mouse cursor, hover to expand.</p>
         <p>Each line represents a comment — darker lines mean longer comments.</p>
         <p>Best to interact with the tree from the left.</p>
         <p class="onboard-author">by <a href="https://news.ycombinator.com/user?id=modemuser" target="_blank">modemuser</a></p>

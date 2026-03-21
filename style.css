@@ -174,7 +174,7 @@ body {
    Default is "bar mode" (thin strip). Becomes "card mode" when
    parent is expanded or comment is top-level. */
 :root {
-  --bar-height: 2px;
+  --bar-height: 3px;
 }
 
 .comment {
@@ -208,7 +208,7 @@ body {
 .comment-bar {
   min-height: 0;
   overflow: hidden;
-  margin-bottom: 0.5px;
+  border-bottom: 1px solid #f6f6ef;
 }
 
 /* Row: comment content, hidden by grid 0fr track */
