@@ -11,25 +11,12 @@ export function setupOnboarding() {
   // sessionStorage.setItem(STORAGE_KEY, '1');
 
   const container = document.getElementById('container');
-  const isTouch = matchMedia('(pointer: coarse)').matches;
+  if (matchMedia('(pointer: coarse)').matches) return;
 
   const overlay = document.createElement('div');
   overlay.className = 'onboard-overlay';
 
-  if (isTouch) {
-    overlay.innerHTML = `
-      <div class="onboard-overlay-content">
-        <p class="onboard-title">commentree</p>
-        <p>Tap a comment to expand its reply tree.</p>
-        <p>Tap again to collapse.</p>
-        <p class="onboard-dismiss">tap anywhere to start</p>
-      </div>
-    `;
-    document.body.appendChild(overlay);
-    requestAnimationFrame(() => overlay.classList.add('visible'));
-
-    overlay.addEventListener('click', () => dismiss(overlay));
-  } else {
+  {
     overlay.innerHTML = `
       <div class="onboard-overlay-content">
         <p class="onboard-title">commentree</p>
