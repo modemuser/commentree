@@ -18,22 +18,64 @@
   overflow: hidden;
 }
 
-/* Comment wrapper */
+/* Comment — grid: bar | row | children
+   Default is "bar mode" (thin strip). Becomes "card mode" when
+   parent is expanded or comment is top-level. */
 .ct-comment {
-  position: relative;
-  overflow: hidden;
+  display: grid;
+  grid-template-rows: 2px 0fr;
+  transition: grid-template-rows 0.3s ease;
   min-width: 0;
+  margin: 0;
+  padding: 0;
 }
 
-.ct-comment:not(.ct-has-children) {
-  margin-bottom: 3px;
+.ct-comment.ct-has-children {
+  grid-template-rows: 2px 0fr auto;
 }
 
-/* The comment row keeps HN's original markup/styles */
+/* Card mode: top-level or parent is expanded */
+#ct-container > .ct-comment {
+  grid-template-rows: 0px 1fr;
+}
+#ct-container > .ct-comment.ct-has-children {
+  grid-template-rows: 0px 1fr auto;
+}
+.ct-expanded > .ct-children > .ct-comment {
+  grid-template-rows: 0px 1fr;
+}
+.ct-expanded > .ct-children > .ct-comment.ct-has-children {
+  grid-template-rows: 0px 1fr auto;
+}
+
+/* Bar: the thin colored strip representing a collapsed comment */
+.ct-comment-bar {
+  min-height: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+/* Reset any HN styles leaking into our elements */
+#ct-container table,
+#ct-container td {
+  margin: 0;
+  border-spacing: 0;
+}
+
+/* Row: comment content, hidden by grid 0fr track */
 .ct-comment-row {
   padding: 4px 8px;
   border-bottom: 1px solid #f0ede6;
   transition: background 0.15s ease;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* Hide padding in bar mode — only show when row is visible */
+.ct-comment:not(#ct-container > .ct-comment):not(.ct-expanded > .ct-children > .ct-comment) > .ct-comment-row {
+  padding: 0;
 }
 
 .ct-comment.ct-expanded > .ct-comment-row,
@@ -41,46 +83,32 @@
   background: #fefcf7;
 }
 
-/* Tree preview strip below comment */
-.ct-tree-preview {
-  overflow: hidden;
-  cursor: pointer;
-  transition: opacity 0.2s ease, max-height 0.3s ease;
-  max-height: 30px;
-  opacity: 1;
-  padding-left: var(--vote-col-w, 16px);
-}
-
-.ct-tree-canvas {
-  display: block;
-  width: 100%;
-}
-
-.ct-comment.ct-expanded > .ct-tree-preview {
-  max-height: 0;
-  opacity: 0;
-}
-
-/* Children container with expand/collapse animation */
+/* Children container */
 .ct-children {
-  display: grid;
-  grid-template-rows: 0fr;
-  opacity: 0;
-  transition: grid-template-rows 0.3s ease, opacity 0.2s ease;
+  padding-left: 24px;
+  border-left: none;
+  min-height: 0;
+  overflow: hidden;
+  transition: padding-left 0.3s ease;
+  margin: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.ct-expanded > .ct-children {
   padding-left: 43px;
 }
 
-.ct-children-inner {
-  overflow: hidden;
-  min-height: 0;
+@media (pointer: coarse) {
+  .ct-children {
+    padding-left: 10px;
+  }
+  .ct-expanded > .ct-children {
+    padding-left: 10px;
+  }
 }
 
-.ct-comment.ct-expanded > .ct-children {
-  grid-template-rows: 1fr;
-  opacity: 1;
-}
-
-/* Onboarding overlay */
+/* Onboarding overlay — desktop only */
 .ct-onboard-overlay {
   position: fixed;
   inset: 0;

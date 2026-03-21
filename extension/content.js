@@ -1,7 +1,7 @@
 /**
  * commentree — Chrome extension content script.
  * Keeps HN's page intact. Parses the flat comment table into a nested tree,
- * replaces just the comment-tree section, and adds tree previews + expand/collapse.
+ * replaces just the comment-tree section, and adds bar↔card expand/collapse.
  */
 
 (function () {
@@ -21,7 +21,6 @@
 
       const indentTd = row.querySelector('td.ind');
       const depth = parseInt(indentTd?.getAttribute('indent') || '0', 10);
-      const defaultTd = row.querySelector('td.default');
       const bodyEl = row.querySelector('div.commtext');
 
       if (!bodyEl) continue;
@@ -63,98 +62,7 @@
     return roots;
   }
 
-  // ── Tree preview (canvas) ───────────────────────────────────
-
-  function countDescendants(item) {
-    let count = 0;
-    for (const c of item.children || []) {
-      if (c.text != null) count += 1 + countDescendants(c);
-    }
-    return count;
-  }
-
-  const _pendingCanvases = [];
-
-  function renderTreePreview(children) {
-    const wrapper = document.createElement('div');
-    wrapper.className = 'ct-tree-preview';
-
-    const bars = [];
-
-    function countDesc(item) {
-      let count = 0;
-      for (const c of item.children || []) {
-        if (c.text == null) continue;
-        count += 1 + countDesc(c);
-      }
-      return count;
-    }
-
-    function collectBars(items, depth) {
-      for (const item of items) {
-        if (item.text == null) continue;
-        const valid = (item.children || []).filter(c => c.text != null);
-        bars.push({ depth, descendants: countDesc(item), textLen: item.text.length });
-        if (valid.length > 0) collectBars(valid, depth + 1);
-      }
-    }
-
-    collectBars(children, 0);
-    if (bars.length === 0) return wrapper;
-
-    const canvas = document.createElement('canvas');
-    canvas.className = 'ct-tree-canvas';
-    wrapper.appendChild(canvas);
-
-    // Queue for batch painting — prevents cascading width growth
-    _pendingCanvases.push({ canvas, wrapper, bars });
-
-    return wrapper;
-  }
-
-  function flushTreeCanvases() {
-    if (_pendingCanvases.length === 0) return;
-    requestAnimationFrame(() => {
-      const items = _pendingCanvases.splice(0);
-      // Read pass: measure all widths first
-      const widths = items.map(({ wrapper }) => wrapper.offsetWidth || 300);
-      // Write pass: paint all canvases
-      for (let i = 0; i < items.length; i++) {
-        const { canvas, bars } = items[i];
-        paintTreeCanvas(canvas, bars, widths[i]);
-      }
-    });
-  }
-
-  function paintTreeCanvas(canvas, bars, w) {
-    const barH = 2;
-    const maxH = 24;
-    const scale = bars.length * barH > maxH ? maxH / (bars.length * barH) : 1;
-    w = w || 200;
-    const h = Math.min(maxH, Math.ceil(bars.length * barH));
-
-    canvas.width = w * 2;
-    canvas.height = h * 2;
-    // Do NOT set canvas.style.width — let CSS width:100% handle it
-    canvas.style.height = `${h}px`;
-
-    const ctx = canvas.getContext('2d');
-    ctx.scale(2, 2);
-
-    for (let i = 0; i < bars.length; i++) {
-      const { depth, descendants, textLen } = bars[i];
-      const indent = depth * 6;
-      const barW = w - indent;
-      const x = indent;
-      const y = i * barH * scale;
-      const barHeight = Math.max(1, barH * scale - 0.5);
-      const intensity = 0.12 + Math.sqrt(textLen) * 0.006 + Math.sqrt(descendants) * 0.07;
-      ctx.fillStyle = `rgba(0, 0, 0, ${intensity})`;
-      ctx.fillRect(x, y, barW, barHeight);
-    }
-  }
-
-  // ── Render nested comments using HN's original markup ───────
+  // ── Render nested comments with bar↔card grid ─────────────
 
   function renderComment(item) {
     if (!item || item.text == null) return null;
@@ -162,7 +70,14 @@
     const wrapper = document.createElement('div');
     wrapper.className = 'ct-comment';
 
-    // The comment row is the cloned HN table (vote + content), intact
+    // Bar: thin colored strip visible when comment is collapsed
+    const bar = document.createElement('div');
+    bar.className = 'ct-comment-bar';
+    const intensity = 0.06 + Math.min(Math.sqrt(item.text.length) * 0.008, 0.3);
+    bar.style.background = `rgba(0, 0, 0, ${intensity})`;
+    wrapper.appendChild(bar);
+
+    // Row: the cloned HN table (vote + content), intact
     const row = document.createElement('div');
     row.className = 'ct-comment-row';
     row.appendChild(item.rowNode);
@@ -173,23 +88,14 @@
     if (validChildren.length > 0) {
       wrapper.classList.add('ct-has-children');
 
-      // Tree preview strip
-      const preview = renderTreePreview(validChildren);
-      wrapper.appendChild(preview);
-
-      // Children container with expand/collapse
       const childrenContainer = document.createElement('div');
       childrenContainer.className = 'ct-children';
 
-      const childrenInner = document.createElement('div');
-      childrenInner.className = 'ct-children-inner';
-
       for (const child of validChildren) {
         const childEl = renderComment(child);
-        if (childEl) childrenInner.appendChild(childEl);
+        if (childEl) childrenContainer.appendChild(childEl);
       }
 
-      childrenContainer.appendChild(childrenInner);
       wrapper.appendChild(childrenContainer);
     }
 
@@ -210,17 +116,7 @@
 
   commentTree.replaceWith(container);
 
-  // Measure vote column width so tree previews align with comment body
-  const firstDefault = container.querySelector('.ct-comment-row td.default');
-  if (firstDefault) {
-    const rowLeft = firstDefault.closest('.ct-comment-row').getBoundingClientRect().left;
-    const tdLeft = firstDefault.getBoundingClientRect().left;
-    container.style.setProperty('--vote-col-w', `${tdLeft - rowLeft}px`);
-  }
-
-  flushTreeCanvases();
-
-// ── Interactions (expand/collapse) ──────────────────────────
+  // ── Interactions (expand/collapse) ──────────────────────────
 
   const COLLAPSE_DELAY = 400;
   const EXPAND_DELAY = 150;
@@ -241,21 +137,58 @@
 
   const collapseTimers = new Map();
   const expandTimers = new Map();
+  let mouseX = -1, mouseY = -1;
+  let expandedAtX = -1, expandedAtY = -1;
+
+  document.addEventListener('mousemove', (e) => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+  });
+
+  function mouseMoved() {
+    return mouseX !== expandedAtX || mouseY !== expandedAtY;
+  }
+
+  function markExpanded() {
+    expandedAtX = mouseX;
+    expandedAtY = mouseY;
+  }
 
   document.addEventListener('mouseover', (e) => {
-    const trigger = e.target.closest?.('.ct-comment-row') || e.target.closest?.('.ct-tree-preview');
-    if (!trigger) return;
-    const comment = trigger.parentElement;
-    if (!comment?.classList.contains('ct-has-children')) return;
+    const row = e.target.closest?.('.ct-comment-row');
+    const childrenArea = !row && e.target.closest?.('.ct-children');
+    if (!row && !childrenArea) return;
+    let comment = row ? row.parentElement : childrenArea.parentElement;
+
+    // Walk up from bar-mode comments to the first card-mode ancestor
+    while (comment) {
+      const parent = comment.parentElement?.closest('.ct-comment');
+      if (!parent || parent.classList.contains('ct-expanded')) break;
+      comment = parent;
+    }
+    if (!comment) return;
 
     cancelCollapseChain(comment, collapseTimers);
 
-    if (!comment.classList.contains('ct-expanded') && !expandTimers.has(comment)) {
+    if (comment.classList.contains('ct-has-children') &&
+        !comment.classList.contains('ct-expanded') &&
+        !expandTimers.has(comment)) {
       const timer = setTimeout(() => {
         expandTimers.delete(comment);
+        if (!mouseMoved()) return;
+        markExpanded();
         comment.classList.add('ct-expanded');
       }, EXPAND_DELAY);
       expandTimers.set(comment, timer);
+    } else if (comment.classList.contains('ct-expanded') && mouseMoved()) {
+      // Open comment — expand only the child under the cursor
+      const el = document.elementFromPoint(mouseX, mouseY);
+      if (!el) return;
+      const child = el.closest('.ct-comment.ct-has-children:not(.ct-expanded)');
+      if (!child || child.parentElement?.closest('.ct-comment') !== comment) return;
+      markExpanded();
+      cancelCollapseChain(child, collapseTimers);
+      child.classList.add('ct-expanded');
     }
   });
 
@@ -279,9 +212,16 @@
     document.addEventListener('click', (e) => {
       if (e.target.closest('a')) return;
 
-      const preview = e.target.closest?.('.ct-tree-preview');
-      if (preview) {
-        const comment = preview.parentElement;
+      // Tap anywhere in the children/bars area to expand the top-level ancestor
+      const childrenArea = e.target.closest?.('.ct-children');
+      if (childrenArea) {
+        let comment = childrenArea.parentElement;
+        // Walk up from bar-mode to the first card-mode ancestor
+        while (comment) {
+          const parent = comment.parentElement?.closest('.ct-comment');
+          if (!parent || parent.classList.contains('ct-expanded')) break;
+          comment = parent;
+        }
         if (comment?.classList.contains('ct-has-children') && !comment.classList.contains('ct-expanded')) {
           comment.classList.add('ct-expanded');
           return;
@@ -294,9 +234,18 @@
       if (!comment?.classList.contains('ct-has-children')) return;
 
       if (comment.classList.contains('ct-expanded')) {
-        comment.querySelectorAll('.ct-expanded').forEach(desc => desc.classList.remove('ct-expanded'));
-        beginCollapse();
-        comment.classList.remove('ct-expanded');
+        // If children are expanded, collapse them first (one level at a time)
+        const expandedChildren = comment.querySelectorAll(':scope > .ct-children > .ct-comment.ct-expanded');
+        if (expandedChildren.length > 0) {
+          expandedChildren.forEach(child => {
+            child.querySelectorAll('.ct-expanded').forEach(desc => desc.classList.remove('ct-expanded'));
+            child.classList.remove('ct-expanded');
+          });
+          beginCollapse();
+        } else {
+          beginCollapse();
+          comment.classList.remove('ct-expanded');
+        }
       } else {
         comment.classList.add('ct-expanded');
       }
@@ -376,6 +325,11 @@
   }
 
   function collapseSingle(comment) {
+    // Always strip expanded from all descendants first
+    comment.querySelectorAll('.ct-expanded').forEach(desc => {
+      desc.classList.remove('ct-expanded');
+    });
+
     const row = comment.querySelector(':scope > .ct-comment-row');
     if (!row) return;
     const rowRect = row.getBoundingClientRect();
@@ -408,52 +362,30 @@
     }
   }
 
-  // ── Onboarding ────────────────────────────────────────────────
+  // ── Onboarding (desktop only) ──────────────────────────────
 
-  const ONBOARD_KEY = 'commentree_onboarded';
-
-  if (true /* !sessionStorage.getItem(ONBOARD_KEY) */) {
-    // sessionStorage.setItem(ONBOARD_KEY, '1');
-
-    const isTouch = matchMedia('(pointer: coarse)').matches;
+  if (!matchMedia('(pointer: coarse)').matches && !sessionStorage.getItem('commentree_onboarded')) {
+    sessionStorage.setItem('commentree_onboarded', '1');
     const overlay = document.createElement('div');
     overlay.className = 'ct-onboard-overlay';
+    overlay.innerHTML = `
+      <div class="ct-onboard-content">
+        <p class="ct-onboard-title">commentree</p>
+        <p>Navigate the comment tree with your cursor.</p>
+        <p>Move to the left margin to expand replies.</p>
+        <p class="ct-onboard-dismiss">move your cursor to the left to begin</p>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('ct-visible'));
 
-    if (isTouch) {
-      overlay.innerHTML = `
-        <div class="ct-onboard-content">
-          <p class="ct-onboard-title">commentree</p>
-          <p>Tap a comment to expand its reply tree.</p>
-          <p>Tap again to collapse.</p>
-          <p class="ct-onboard-dismiss">tap anywhere to start</p>
-        </div>
-      `;
-      document.body.appendChild(overlay);
-      requestAnimationFrame(() => overlay.classList.add('ct-visible'));
-      overlay.addEventListener('click', () => {
+    document.addEventListener('mousemove', function onMove(e) {
+      const rect = container.getBoundingClientRect();
+      if (e.clientX < rect.left) {
         overlay.classList.remove('ct-visible');
         setTimeout(() => overlay.remove(), 500);
-      });
-    } else {
-      overlay.innerHTML = `
-        <div class="ct-onboard-content">
-          <p class="ct-onboard-title">commentree</p>
-          <p>Navigate the comment tree with your cursor.</p>
-          <p>Move to the left margin to expand replies.</p>
-          <p class="ct-onboard-dismiss">move your cursor to the left to begin</p>
-        </div>
-      `;
-      document.body.appendChild(overlay);
-      requestAnimationFrame(() => overlay.classList.add('ct-visible'));
-
-      document.addEventListener('mousemove', function onMove(e) {
-        const rect = container.getBoundingClientRect();
-        if (e.clientX < rect.left) {
-          overlay.classList.remove('ct-visible');
-          setTimeout(() => overlay.remove(), 500);
-          document.removeEventListener('mousemove', onMove);
-        }
-      });
-    }
+        document.removeEventListener('mousemove', onMove);
+      }
+    });
   }
 })();

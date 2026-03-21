@@ -23,22 +23,58 @@ window.addEventListener('scroll', () => {
 export function setupInteractions() {
   const collapseTimers = new Map();
   const expandTimers = new Map();
+  let mouseX = -1, mouseY = -1;
+  let expandedAtX = -1, expandedAtY = -1;
+
+  const container = document.getElementById('container');
+
+  document.addEventListener('mousemove', (e) => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+  });
+
+  function mouseMoved() {
+    return mouseX !== expandedAtX || mouseY !== expandedAtY;
+  }
+
+  function markExpanded() {
+    expandedAtX = mouseX;
+    expandedAtY = mouseY;
+  }
 
   document.addEventListener('mouseover', (e) => {
     const row = e.target.closest?.('.comment-row');
     const childrenArea = !row && e.target.closest?.('.comment-children');
     if (!row && !childrenArea) return;
-    const comment = row ? row.parentElement : childrenArea.parentElement;
-    if (!comment?.classList.contains('has-children')) return;
+    let comment = row ? row.parentElement : childrenArea.parentElement;
+
+    while (comment) {
+      const parent = comment.parentElement?.closest('.comment');
+      if (!parent || parent.classList.contains('expanded')) break;
+      comment = parent;
+    }
+    if (!comment) return;
 
     cancelCollapseChain(comment, collapseTimers);
 
-    if (!comment.classList.contains('expanded') && !expandTimers.has(comment)) {
+    if (comment.classList.contains('has-children') &&
+        !comment.classList.contains('expanded') &&
+        !expandTimers.has(comment)) {
       const timer = setTimeout(() => {
         expandTimers.delete(comment);
+        if (!mouseMoved()) return;
+        markExpanded();
         comment.classList.add('expanded');
       }, EXPAND_DELAY);
       expandTimers.set(comment, timer);
+    } else if (comment.classList.contains('expanded') && mouseMoved()) {
+      const el = document.elementFromPoint(mouseX, mouseY);
+      if (!el) return;
+      const child = el.closest('.comment.has-children:not(.expanded)');
+      if (!child || child.parentElement?.closest('.comment') !== comment) return;
+      markExpanded();
+      cancelCollapseChain(child, collapseTimers);
+      child.classList.add('expanded');
     }
   });
 
@@ -65,10 +101,15 @@ export function setupInteractions() {
       // Don't intercept link clicks
       if (e.target.closest('a')) return;
 
-      // Tap bars area to expand parent comment
+      // Tap anywhere in the children/bars area to expand the top-level ancestor
       const childrenArea = e.target.closest?.('.comment-children');
       if (childrenArea) {
-        const comment = childrenArea.parentElement;
+        let comment = childrenArea.parentElement;
+        while (comment) {
+          const parent = comment.parentElement?.closest('.comment');
+          if (!parent || parent.classList.contains('expanded')) break;
+          comment = parent;
+        }
         if (comment?.classList.contains('has-children') && !comment.classList.contains('expanded')) {
           comment.classList.add('expanded');
           return;
@@ -82,19 +123,24 @@ export function setupInteractions() {
       if (!comment?.classList.contains('has-children')) return;
 
       if (comment.classList.contains('expanded')) {
-        // Collapse this comment and descendants
-        comment.querySelectorAll('.expanded').forEach(desc => {
-          desc.classList.remove('expanded');
-        });
-        beginCollapse();
-        comment.classList.remove('expanded');
+        // If children are expanded, collapse them first (one level at a time)
+        const expandedChildren = comment.querySelectorAll(':scope > .comment-children > .comment.expanded');
+        if (expandedChildren.length > 0) {
+          expandedChildren.forEach(child => {
+            child.querySelectorAll('.expanded').forEach(desc => desc.classList.remove('expanded'));
+            child.classList.remove('expanded');
+          });
+          beginCollapse();
+        } else {
+          beginCollapse();
+          comment.classList.remove('expanded');
+        }
       } else {
         comment.classList.add('expanded');
       }
     });
   }
 
-  const container = document.getElementById('container');
   container.addEventListener('mouseleave', () => {
     for (const [, timer] of expandTimers) clearTimeout(timer);
     expandTimers.clear();

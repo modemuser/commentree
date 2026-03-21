@@ -7,8 +7,8 @@
 const STORAGE_KEY = 'commentree_onboarded';
 
 export function setupOnboarding() {
-  // if (sessionStorage.getItem(STORAGE_KEY)) return;
-  // sessionStorage.setItem(STORAGE_KEY, '1');
+  if (sessionStorage.getItem(STORAGE_KEY)) return;
+  sessionStorage.setItem(STORAGE_KEY, '1');
 
   const container = document.getElementById('container');
   if (matchMedia('(pointer: coarse)').matches) return;
