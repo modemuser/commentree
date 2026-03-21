@@ -42,16 +42,9 @@ When you load a thread, you see:
 
 Comment A has 12 replies in a balanced tree. Comment B has a single reply. Comment C has 38 replies with a deep, branching discussion.
 
-**Hover over any comment to reveal its direct replies**, rendered as normal indented comments below it — just like HN. Each reply has its own tree preview showing *its* subtree. Hover a reply to drill deeper. Move your mouse away and the thread collapses back.
+**Hover over any comment to reveal its direct replies**, rendered as normal indented comments below it — just like HN. Each reply has its own tree preview showing *its* subtree. Hover a reply to drill deeper. Move your mouse away and the thread collapses back with a staggered animation (deepest children first).
 
-The interaction is entirely CSS-driven:
-
-```css
-.comment-children { display: none; }
-.comment:hover > .comment-children { display: block; }
-```
-
-Because child comments are nested inside their parent's DOM element, hovering a deeply nested reply keeps the entire ancestor chain expanded. No JavaScript event handling needed for the core interaction.
+Because child comments are nested inside their parent's DOM element, hovering a deeply nested reply keeps the entire ancestor chain expanded. On touch devices, tap to expand and tap again to collapse.
 
 ## How it works
 
@@ -85,11 +78,29 @@ Each tree preview is a `<canvas>` element rendered at 2x for retina displays. De
 - **Vanilla JS** (ES modules, no framework, no build step)
 - **Pure CSS** for hover interaction
 - **Canvas API** for tree previews
-- **Algolia HN API** for data
+- **Algolia HN API** for data (standalone app)
 
 Zero dependencies. Serve with any static file server.
 
-## Usage
+## Chrome extension
+
+The extension adds tree previews directly to Hacker News thread pages. It keeps HN's native page, styles, and functionality (voting, reply links, navigation) intact — only the comment tree section is replaced with the commentree layout.
+
+### Install
+
+1. Open `chrome://extensions`
+2. Enable **Developer mode**
+3. Click **Load unpacked** and select the `extension/` directory
+
+Visit any HN thread and tree previews appear automatically.
+
+### How it works
+
+The content script runs at `document_idle` on HN item pages. It parses HN's flat comment table (`tr.athing.comtr` rows with `indent` attributes) into a nested tree, clones each comment's original DOM nodes (vote links, author, body, reply), and rebuilds the section with tree previews and expand/collapse behavior.
+
+All CSS classes are prefixed `ct-` to avoid collisions with HN's styles. A scoped `box-sizing: border-box` reset prevents HN's default `content-box` from causing layout overflow.
+
+## Standalone app
 
 ```bash
 # Serve locally
@@ -99,17 +110,23 @@ python3 -m http.server 8080
 open "http://localhost:8080?id=47440430"
 ```
 
-Pass any HN item ID as the `?id=` query parameter.
+Pass any HN item ID as the `?id=` query parameter. The front page shows current top stories.
 
 ## File structure
 
 ```
-index.html        Entry point
-style.css         All styling — layout, comment cards, tree previews, hover states
+index.html            Standalone app entry point
+style.css             Standalone app styles
 js/
-  main.js         Orchestrator — fetch, render, set title
-  api.js          Algolia HN API fetch
-  render.js       Recursive comment rendering + canvas tree preview generation
+  main.js             Orchestrator — fetch, render, routing
+  api.js              Algolia HN API fetch
+  render.js           Comment rendering + canvas tree previews
+  interact.js         Expand/collapse interactions
+  onboard.js          First-visit onboarding flow
+extension/
+  manifest.json       Chrome MV3 manifest
+  content.js          Content script — DOM parsing, rendering, interactions
+  style.css           Extension-only styles (ct- prefixed)
 ```
 
 ## Design decisions
