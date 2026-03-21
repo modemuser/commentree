@@ -207,6 +207,44 @@
     scheduleCollapse(comment, collapseTimers);
   });
 
+  // Desktop: click to pin/unpin (single pinned comment, ancestors stay open)
+  if (!matchMedia('(pointer: coarse)').matches) {
+    function unpinAll() {
+      container.querySelectorAll('.ct-pinned').forEach(el => el.classList.remove('ct-pinned'));
+      container.querySelectorAll('.ct-pinned-ancestor').forEach(el => el.classList.remove('ct-pinned-ancestor'));
+    }
+
+    function pinComment(comment) {
+      unpinAll();
+      comment.classList.add('ct-pinned');
+      if (!comment.classList.contains('ct-expanded')) {
+        comment.classList.add('ct-expanded');
+      }
+      let ancestor = comment.parentElement?.closest?.('.ct-comment');
+      while (ancestor) {
+        ancestor.classList.add('ct-pinned-ancestor');
+        if (!ancestor.classList.contains('ct-expanded')) {
+          ancestor.classList.add('ct-expanded');
+        }
+        ancestor = ancestor.parentElement?.closest?.('.ct-comment');
+      }
+    }
+
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('a')) return;
+      const row = e.target.closest?.('.ct-comment-row');
+      if (!row) return;
+      const comment = row.parentElement;
+      if (!comment?.classList.contains('ct-has-children')) return;
+
+      if (comment.classList.contains('ct-pinned')) {
+        unpinAll();
+      } else if (comment.classList.contains('ct-expanded')) {
+        pinComment(comment);
+      }
+    });
+  }
+
   // Touch: tap to toggle
   if (matchMedia('(pointer: coarse)').matches) {
     document.addEventListener('click', (e) => {
@@ -258,7 +296,7 @@
     expandTimers.clear();
 
     const expanded = [];
-    container.querySelectorAll('.ct-comment.ct-expanded').forEach(el => {
+    container.querySelectorAll('.ct-comment.ct-expanded:not(.ct-pinned):not(.ct-pinned-ancestor)').forEach(el => {
       let depth = 0;
       let parent = el.parentElement?.closest?.('.ct-comment');
       while (parent) { depth++; parent = parent.parentElement?.closest?.('.ct-comment'); }
@@ -325,8 +363,10 @@
   }
 
   function collapseSingle(comment) {
-    // Always strip expanded from all descendants first
-    comment.querySelectorAll('.ct-expanded').forEach(desc => {
+    if (comment.classList.contains('ct-pinned') || comment.classList.contains('ct-pinned-ancestor')) return;
+
+    // Always strip expanded from all descendants first (except pinned/ancestors)
+    comment.querySelectorAll('.ct-expanded:not(.ct-pinned):not(.ct-pinned-ancestor)').forEach(desc => {
       desc.classList.remove('ct-expanded');
     });
 
@@ -339,8 +379,9 @@
   }
 
   function collapseTree(comment, timers) {
+    if (comment.classList.contains('ct-pinned') || comment.classList.contains('ct-pinned-ancestor')) return;
     const toCollapse = [];
-    comment.querySelectorAll('.ct-expanded').forEach(desc => {
+    comment.querySelectorAll('.ct-expanded:not(.ct-pinned):not(.ct-pinned-ancestor)').forEach(desc => {
       if (timers.has(desc)) {
         clearTimeout(timers.get(desc));
         timers.delete(desc);
@@ -373,6 +414,7 @@
         <p class="ct-onboard-title">commentree</p>
         <p>Navigate the comment tree with your cursor.</p>
         <p>Move to the left margin to expand replies.</p>
+        <p>Click a comment to pin it open.</p>
         <p class="ct-onboard-dismiss">move your cursor to the left to begin</p>
       </div>
     `;

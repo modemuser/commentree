@@ -108,6 +108,24 @@
   }
 }
 
+/* Pinned comment */
+.ct-comment.ct-pinned > .ct-comment-row {
+  border-left: 3px solid #ff6600;
+  background: #fff5eb;
+}
+
+/* Pinned ancestor */
+.ct-comment.ct-pinned-ancestor > .ct-comment-row {
+  border-left: 3px solid #ffd9b3;
+}
+
+/* Cursor hint for clickable expanded comments on desktop */
+@media (pointer: fine) {
+  .ct-comment.ct-expanded.ct-has-children > .ct-comment-row {
+    cursor: pointer;
+  }
+}
+
 /* Onboarding overlay — desktop only */
 .ct-onboard-overlay {
   position: fixed;
