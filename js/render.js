@@ -31,6 +31,7 @@ export function renderComment(item, depth = 0) {
 
   const comment = document.createElement('div');
   comment.className = 'comment';
+  if (item.id) comment.dataset.id = item.id;
 
   // Bar: thin colored strip visible when comment is collapsed
   const bar = document.createElement('div');

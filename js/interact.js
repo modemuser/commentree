@@ -20,61 +20,65 @@ window.addEventListener('scroll', () => {
   }
 });
 
+let mouseX = -1, mouseY = -1;
+document.addEventListener('mousemove', (e) => {
+  mouseX = e.clientX;
+  mouseY = e.clientY;
+});
+
 export function setupInteractions() {
   const collapseTimers = new Map();
-  const expandTimers = new Map();
-  let mouseX = -1, mouseY = -1;
-  let expandedAtX = -1, expandedAtY = -1;
+  let pendingExpand = null; // { comment, timer }
 
-  const container = document.getElementById('container');
-
-  document.addEventListener('mousemove', (e) => {
-    mouseX = e.clientX;
-    mouseY = e.clientY;
-  });
-
-  function mouseMoved() {
-    return mouseX !== expandedAtX || mouseY !== expandedAtY;
+  // Find the outermost unexpanded ancestor of a comment
+  function outermostUnexpanded(comment) {
+    let target = comment;
+    while (target) {
+      const parent = target.parentElement?.closest('.comment');
+      if (!parent || parent.classList.contains('expanded')) break;
+      target = parent;
+    }
+    return target?.classList.contains('has-children') && !target.classList.contains('expanded') ? target : null;
   }
 
-  function markExpanded() {
-    expandedAtX = mouseX;
-    expandedAtY = mouseY;
+  // Schedule expanding the next level in, if mouse is still in the area
+  function scheduleNextLevel(expandedComment) {
+    const el = document.elementFromPoint(mouseX, mouseY);
+    if (!el || !expandedComment.contains(el)) return;
+    const inner = el.closest('.comment');
+    if (!inner) return;
+    const next = outermostUnexpanded(inner);
+    if (!next || !expandedComment.contains(next)) return;
+    scheduleExpand(next);
+  }
+
+  function scheduleExpand(comment) {
+    if (pendingExpand && pendingExpand.comment === comment) return;
+    if (pendingExpand) {
+      clearTimeout(pendingExpand.timer);
+      pendingExpand = null;
+    }
+    const timer = setTimeout(() => {
+      pendingExpand = null;
+      comment.classList.add('expanded');
+      // After expanding, try the next level in
+      requestAnimationFrame(() => scheduleNextLevel(comment));
+    }, EXPAND_DELAY);
+    pendingExpand = { comment, timer };
   }
 
   document.addEventListener('mouseover', (e) => {
     const row = e.target.closest?.('.comment-row');
     const childrenArea = !row && e.target.closest?.('.comment-children');
     if (!row && !childrenArea) return;
-    let comment = row ? row.parentElement : childrenArea.parentElement;
-
-    while (comment) {
-      const parent = comment.parentElement?.closest('.comment');
-      if (!parent || parent.classList.contains('expanded')) break;
-      comment = parent;
-    }
+    const comment = row ? row.parentElement : childrenArea.parentElement;
     if (!comment) return;
 
     cancelCollapseChain(comment, collapseTimers);
 
-    if (comment.classList.contains('has-children') &&
-        !comment.classList.contains('expanded') &&
-        !expandTimers.has(comment)) {
-      const timer = setTimeout(() => {
-        expandTimers.delete(comment);
-        if (!mouseMoved()) return;
-        markExpanded();
-        comment.classList.add('expanded');
-      }, EXPAND_DELAY);
-      expandTimers.set(comment, timer);
-    } else if (comment.classList.contains('expanded') && mouseMoved()) {
-      const el = document.elementFromPoint(mouseX, mouseY);
-      if (!el) return;
-      const child = el.closest('.comment.has-children:not(.expanded)');
-      if (!child || child.parentElement?.closest('.comment') !== comment) return;
-      markExpanded();
-      cancelCollapseChain(child, collapseTimers);
-      child.classList.add('expanded');
+    const target = outermostUnexpanded(comment);
+    if (target) {
+      scheduleExpand(target);
     }
   });
 
@@ -85,31 +89,77 @@ export function setupInteractions() {
     const related = e.relatedTarget;
     if (related && comment.contains(related)) return;
 
-    if (expandTimers.has(comment)) {
-      clearTimeout(expandTimers.get(comment));
-      expandTimers.delete(comment);
+    if (pendingExpand && pendingExpand.comment === comment) {
+      clearTimeout(pendingExpand.timer);
+      pendingExpand = null;
     }
 
     scheduleCollapse(comment, collapseTimers);
   });
 
-  // Touch: tap comment row or bars to toggle
+  // Desktop: click to pin/unpin (single pinned comment, ancestors stay open)
   const isTouch = matchMedia('(pointer: coarse)').matches;
 
+  if (!isTouch) {
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('a')) return;
+      const row = e.target.closest?.('.comment-row');
+      if (!row) return;
+      const comment = row.parentElement;
+      if (!comment?.classList.contains('has-children')) return;
+
+      if (comment.classList.contains('pinned')) {
+        unpinAll();
+        history.replaceState(null, '', location.pathname + location.search);
+      } else if (comment.classList.contains('expanded')) {
+        pinComment(comment);
+      }
+    });
+  }
+
+  function unpinAll() {
+    const container = document.getElementById('container');
+    container.querySelectorAll('.pinned').forEach(el => el.classList.remove('pinned'));
+    container.querySelectorAll('.pinned-ancestor').forEach(el => el.classList.remove('pinned-ancestor'));
+  }
+
+  function pinComment(comment) {
+    unpinAll();
+    comment.classList.add('pinned');
+    if (!comment.classList.contains('expanded')) {
+      comment.classList.add('expanded');
+    }
+    // Mark ancestors as pinned-ancestor so they stay expanded
+    let ancestor = comment.parentElement?.closest?.('.comment');
+    while (ancestor) {
+      ancestor.classList.add('pinned-ancestor');
+      if (!ancestor.classList.contains('expanded')) {
+        ancestor.classList.add('expanded');
+      }
+      ancestor = ancestor.parentElement?.closest?.('.comment');
+    }
+    // Update URL hash
+    const id = comment.dataset.id;
+    if (id) history.replaceState(null, '', `${location.pathname}${location.search}#${id}`);
+  }
+
+  // Restore pin from URL hash on load
+  if (location.hash) {
+    const id = location.hash.slice(1);
+    const target = document.querySelector(`.comment[data-id="${id}"]`);
+    if (target) pinComment(target);
+  }
+
+  // Touch: tap comment row or bars to toggle
   if (isTouch) {
     document.addEventListener('click', (e) => {
       // Don't intercept link clicks
       if (e.target.closest('a')) return;
 
-      // Tap anywhere in the children/bars area to expand the top-level ancestor
+      // Tap bars area to expand parent comment
       const childrenArea = e.target.closest?.('.comment-children');
       if (childrenArea) {
-        let comment = childrenArea.parentElement;
-        while (comment) {
-          const parent = comment.parentElement?.closest('.comment');
-          if (!parent || parent.classList.contains('expanded')) break;
-          comment = parent;
-        }
+        const comment = childrenArea.parentElement;
         if (comment?.classList.contains('has-children') && !comment.classList.contains('expanded')) {
           comment.classList.add('expanded');
           return;
@@ -123,30 +173,27 @@ export function setupInteractions() {
       if (!comment?.classList.contains('has-children')) return;
 
       if (comment.classList.contains('expanded')) {
-        // If children are expanded, collapse them first (one level at a time)
-        const expandedChildren = comment.querySelectorAll(':scope > .comment-children > .comment.expanded');
-        if (expandedChildren.length > 0) {
-          expandedChildren.forEach(child => {
-            child.querySelectorAll('.expanded').forEach(desc => desc.classList.remove('expanded'));
-            child.classList.remove('expanded');
-          });
-          beginCollapse();
-        } else {
-          beginCollapse();
-          comment.classList.remove('expanded');
-        }
+        // Collapse this comment and descendants
+        comment.querySelectorAll('.expanded').forEach(desc => {
+          desc.classList.remove('expanded');
+        });
+        beginCollapse();
+        comment.classList.remove('expanded');
       } else {
         comment.classList.add('expanded');
       }
     });
   }
 
+  const container = document.getElementById('container');
   container.addEventListener('mouseleave', () => {
-    for (const [, timer] of expandTimers) clearTimeout(timer);
-    expandTimers.clear();
+    if (pendingExpand) {
+      clearTimeout(pendingExpand.timer);
+      pendingExpand = null;
+    }
 
     const expanded = [];
-    container.querySelectorAll('.comment.expanded').forEach(el => {
+    container.querySelectorAll('.comment.expanded:not(.pinned):not(.pinned-ancestor)').forEach(el => {
       let depth = 0;
       let parent = el.parentElement?.closest?.('.comment');
       while (parent) { depth++; parent = parent.parentElement?.closest?.('.comment'); }
@@ -216,8 +263,10 @@ function beginCollapse() {
 }
 
 function collapseSingle(comment) {
-  // Always strip expanded from all descendants first
-  comment.querySelectorAll('.expanded').forEach(desc => {
+  if (comment.classList.contains('pinned') || comment.classList.contains('pinned-ancestor')) return;
+
+  // Always strip expanded from all descendants first (except pinned/ancestors)
+  comment.querySelectorAll('.expanded:not(.pinned):not(.pinned-ancestor)').forEach(desc => {
     desc.classList.remove('expanded');
   });
 
@@ -232,8 +281,9 @@ function collapseSingle(comment) {
 }
 
 function collapse(comment, timers) {
+  if (comment.classList.contains('pinned') || comment.classList.contains('pinned-ancestor')) return;
   const toCollapse = [];
-  comment.querySelectorAll('.expanded').forEach(desc => {
+  comment.querySelectorAll('.expanded:not(.pinned):not(.pinned-ancestor)').forEach(desc => {
     if (timers.has(desc)) {
       clearTimeout(timers.get(desc));
       timers.delete(desc);
