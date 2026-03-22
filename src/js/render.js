@@ -28,6 +28,7 @@ export function renderStory(story) {
       ${href ? `<a href="${href}" target="_blank">${title}</a>` : title}
       ${domain ? `<span class="story-domain">(${domain})</span>` : ''}
     </div>
+    ${story.text && !href ? `<div class="story-text">${story.text}</div>` : ''}
     <div class="story-meta">
       ${story.points} points by ${author} · ${relativeTime(story.created_at_i)} · ${story.commentCount} comments
     </div>

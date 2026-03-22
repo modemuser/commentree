@@ -99,12 +99,12 @@ export function setupInteractions(container, p = '') {
       const row = e.target.closest?.(`.${CLS.row}`);
       if (!row) return;
       const comment = row.parentElement;
-      if (!comment?.classList.contains(CLS.hasChildren)) return;
+      if (!comment?.classList.contains(CLS.comment)) return;
 
       if (comment.classList.contains(CLS.pinned)) {
         unpinAll();
         history.replaceState(null, '', location.pathname + location.search);
-      } else if (comment.classList.contains(CLS.expanded)) {
+      } else if (comment.classList.contains(CLS.expanded) || !comment.classList.contains(CLS.hasChildren)) {
         pinComment(comment);
       }
     });

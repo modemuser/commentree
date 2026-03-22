@@ -30,6 +30,7 @@ async function loadThread(threadId) {
     const story = {
       title: raw.title,
       url: raw.url,
+      text: raw.text,
       author: raw.author,
       points: raw.points,
       created_at_i: raw.created_at_i,
