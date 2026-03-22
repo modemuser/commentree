@@ -113,6 +113,35 @@
     return { rowNode, text, children, score };
   }
 
+  // ── Detect dark mode ───────────────────────────────────────
+  let isDarkMode = document.documentElement.classList.contains('res-nightmode');
+
+  function barColor(textLen, score) {
+    const textFactor = Math.min(Math.sqrt(textLen) * 0.01, 0.25);
+    const s = score || 0;
+    const scoreFactor = s > 0 ? Math.min(Math.sqrt(s) * 0.015, 0.3) : 0;
+    const downFactor = s < 0 ? Math.min(Math.sqrt(-s) * 0.15, 0.7) : 0;
+    if (isDarkMode) {
+      const i = Math.max(0.01, 0.04 + textFactor * 0.5 + scoreFactor * 0.5 - downFactor * 0.5);
+      return `rgba(255, 255, 255, ${i})`;
+    }
+    const i = Math.max(0.02, 0.08 + textFactor + scoreFactor - downFactor);
+    return `rgba(0, 0, 0, ${i})`;
+  }
+
+  // Watch for RES dark mode toggle
+  new MutationObserver(() => {
+    const dark = document.documentElement.classList.contains('res-nightmode');
+    if (dark === isDarkMode) return;
+    isDarkMode = dark;
+    container.querySelectorAll('.ct-comment-bar').forEach(bar => {
+      bar.style.background = barColor(
+        parseInt(bar.dataset.textLen, 10),
+        parseInt(bar.dataset.score, 10)
+      );
+    });
+  }).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
   // ── Render nested comments with bar↔card grid ─────────────
 
   function renderComment(item) {
@@ -124,10 +153,9 @@
     // Bar: thin colored strip — darkness from text length + upvotes
     const bar = document.createElement('div');
     bar.className = 'ct-comment-bar';
-    const textFactor = Math.min(Math.sqrt(item.text.length) * 0.01, 0.25);
-    const scoreFactor = item.score ? Math.min(Math.sqrt(item.score) * 0.015, 0.3) : 0;
-    const intensity = 0.08 + textFactor + scoreFactor;
-    bar.style.background = `rgba(0, 0, 0, ${intensity})`;
+    bar.dataset.textLen = item.text.length;
+    bar.dataset.score = item.score || 0;
+    bar.style.background = barColor(item.text.length, item.score);
     wrapper.appendChild(bar);
 
     // Row: the cloned HN table (vote + content), intact

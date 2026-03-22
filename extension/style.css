@@ -273,3 +273,67 @@
   display: none;
 }
 
+/* ── Dark mode (RES night mode) ─────────────────────────── */
+
+.res-nightmode .ct-comment-row {
+  border-bottom-color: #333;
+}
+
+.res-nightmode .ct-comment.ct-expanded > .ct-comment-row,
+.res-nightmode .ct-comment-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.res-nightmode .ct-comment.ct-pinned > .ct-comment-row {
+  background: rgba(255, 102, 0, 0.12);
+}
+
+.res-nightmode .ct-comment.ct-pinned-ancestor > .ct-comment-row {
+  border-left-color: #994400;
+}
+
+.res-nightmode .ct-info-btn {
+  background: #333;
+  border-color: #555;
+  color: #999;
+}
+
+.res-nightmode .ct-info-btn:hover {
+  color: #ff6600;
+  border-color: #ff6600;
+}
+
+.res-nightmode .ct-onboard-overlay {
+  background: rgba(30, 30, 30, 0.92);
+}
+
+.res-nightmode .ct-onboard-content {
+  color: #aaa;
+}
+
+.res-nightmode .ct-onboard-dismiss {
+  color: #666;
+}
+
+.res-nightmode .ct-onboard-author {
+  color: #666;
+}
+
+/* Dark mode Reddit layout */
+.res-nightmode .commentarea .ct-children {
+  border-left-color: #333;
+}
+
+.res-nightmode .commentarea .ct-expanded > .ct-children > .ct-comment > .ct-comment-row,
+.res-nightmode .commentarea #ct-container > .ct-comment > .ct-comment-row {
+  border-left-color: #333 !important;
+}
+
+.res-nightmode .commentarea #ct-container::before {
+  background: linear-gradient(to right, rgba(255, 255, 255, 0.06), transparent);
+}
+
+.res-nightmode .commentarea #ct-container:hover::before {
+  opacity: 1;
+}
+
