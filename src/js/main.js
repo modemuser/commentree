@@ -43,11 +43,11 @@ async function loadThread(threadId) {
       if (el) container.appendChild(el);
     }
 
-    setupInteractions();
-    setupOnboarding();
+    setupInteractions(container);
+    setupOnboarding(container);
     document.title = `${story.title} — commentree`;
   } catch (err) {
-    container.innerHTML = `<div id="loading">Failed to load: ${err.message}</div>`;
+    container.textContent = `Failed to load: ${err.message}`;
   }
 }
 
@@ -67,7 +67,7 @@ async function loadFrontPage() {
     container.appendChild(renderFrontPage(stories));
     document.title = 'commentree';
   } catch (err) {
-    container.innerHTML = `<div id="loading">Failed to load: ${err.message}</div>`;
+    container.textContent = `Failed to load: ${err.message}`;
   }
 }
 

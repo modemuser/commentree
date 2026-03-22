@@ -47,19 +47,21 @@ Comments are rendered recursively as nested DOM elements using a CSS grid layout
 </div>
 ```
 
-The bar↔card transition is driven by `grid-template-rows` — bar mode uses `2px 0fr auto`, card mode uses `0px 1fr auto`. CSS transitions handle the animation.
+The bar-to-card transition is driven by `grid-template-rows` — bar mode uses `3px 0fr auto`, card mode uses `0px 1fr auto`. CSS transitions handle the animation.
 
 ### Tech stack
 
 - **Vanilla JS** (ES modules, no framework, no build step)
-- **Pure CSS grid** for bar↔card transitions
+- **Pure CSS grid** for bar-to-card transitions
 - **Algolia HN API** for data (standalone app)
 
 Zero dependencies.
 
 ## Chrome extension
 
-The extension adds the commentree layout directly to Hacker News thread pages. It keeps HN's native page, styles, and functionality (voting, reply links, navigation) intact — only the comment tree section is replaced.
+The extension adds the commentree layout directly to **Hacker News** and **old Reddit** thread pages. It keeps each site's native page, styles, and functionality (voting, reply links, navigation) intact — only the comment tree section is replaced.
+
+On Reddit, bar darkness also factors in the comment's score — higher-voted comments produce darker bars. Negative-score comments are faded. RES dark mode is supported.
 
 ### Install
 
@@ -67,13 +69,13 @@ The extension adds the commentree layout directly to Hacker News thread pages. I
 2. Enable **Developer mode**
 3. Click **Load unpacked** and select the `extension/` directory
 
-Visit any HN thread and the tree layout appears automatically.
+Visit any HN or Reddit thread and the tree layout appears automatically.
 
 ### How it works
 
-The content script runs at `document_idle` on HN item pages. It parses HN's flat comment table (`tr.athing.comtr` rows with `indent` attributes) into a nested tree, clones each comment's original DOM nodes (vote links, author, body, reply), and rebuilds the section with bar↔card expand/collapse behavior.
+The content script runs at `document_idle` on matching pages. On HN, it parses the flat comment table (`tr.athing.comtr` rows with `indent` attributes) into a nested tree. On Reddit, it walks the already-nested `.thing.comment` DOM. In both cases, each comment's original DOM nodes are cloned (preserving votes, author styles, reply links) and rebuilt with bar-to-card expand/collapse behavior.
 
-All CSS classes are prefixed `ct-` to avoid collisions with HN's styles. A scoped `box-sizing: border-box` reset prevents HN's default `content-box` from causing layout overflow.
+All CSS classes are prefixed `ct-` to avoid collisions with each site's styles.
 
 ## Live demo
 
@@ -86,38 +88,36 @@ The front page shows current top stories.
 ### Run locally
 
 ```bash
-npx wrangler dev --port 8787
-open "http://localhost:8787"
+npm start
+open http://localhost:8787
 ```
-
-Uses Cloudflare Workers' local runtime via wrangler, serving from `dist/`.
 
 ### Deploy
 
 ```bash
-./deploy.sh
+npm run deploy
 ```
-
-Deploys to Cloudflare Workers via wrangler.
 
 ## File structure
 
 ```
-dist/
-  index.html            App entry point
-  style.css             App styles
+src/
+  index.html          App entry point
+  style.css           App styles
   js/
-    main.js             Orchestrator — fetch, render, routing
-    api.js              Algolia HN API fetch
-    render.js           Comment rendering (bar + row + children grid)
-    interact.js         Expand/collapse interactions + pin logic
-    onboard.js          First-visit onboarding flow
+    main.js           Orchestrator — fetch, render, routing
+    api.js            Algolia HN API fetch
+    render.js         Comment rendering (bar + row + children grid)
+    interact.js       Expand/collapse interactions + pin logic
+    onboard.js        First-visit onboarding flow
 extension/
-  manifest.json         Chrome MV3 manifest
-  content.js            Content script — DOM parsing, rendering, interactions
-  style.css             Extension-only styles (ct- prefixed)
-deploy.sh               Build dist/ and deploy to Cloudflare Workers
-wrangler.json           Cloudflare Workers config
+  entry.js            Extension entry point — DOM parsing, rendering
+  content.js          Built by esbuild (entry.js + shared modules)
+  manifest.json       Chrome MV3 manifest (HN + Reddit)
+  style.css           Extension-only styles (ct- prefixed)
+worker.js             Cloudflare Workers entry
+wrangler.json         Cloudflare Workers config
+package.json          Dev and deploy scripts
 ```
 
 ## Design decisions
@@ -129,3 +129,7 @@ wrangler.json           Cloudflare Workers config
 **Why progressive disclosure instead of showing everything?** HN's default view dumps hundreds of comments on the page. Most readers only care about a few threads. Commentree lets you see all top-level comments on one screen and selectively drill into the ones that interest you. The bar previews help you choose *which* threads to explore.
 
 **Why no framework/build step?** The entire application is a few hundred lines of JS across a handful of files. A framework would add complexity without adding capability. No build step means you can edit any file and refresh — the feedback loop is instant.
+
+## License
+
+MIT

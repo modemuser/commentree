@@ -1,3 +1,16 @@
+import { barColor } from './color.js';
+
+function esc(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function safeHref(url) {
+  try { return /^https?:/.test(new URL(url).protocol) ? url : ''; }
+  catch { return ''; }
+}
+
 /**
  * Render the story header.
  */
@@ -5,15 +18,18 @@ export function renderStory(story) {
   const el = document.createElement('div');
   el.className = 'story-header';
 
-  const domain = story.url ? new URL(story.url).hostname.replace('www.', '') : '';
+  const href = safeHref(story.url || '');
+  const title = esc(story.title || '');
+  const domain = href ? esc(new URL(href).hostname.replace('www.', '')) : '';
+  const author = esc(story.author || '');
 
   el.innerHTML = `
     <div class="story-title">
-      ${story.url ? `<a href="${story.url}" target="_blank">${story.title}</a>` : story.title}
+      ${href ? `<a href="${href}" target="_blank">${title}</a>` : title}
       ${domain ? `<span class="story-domain">(${domain})</span>` : ''}
     </div>
     <div class="story-meta">
-      ${story.points} points by ${story.author} · ${relativeTime(story.created_at_i)} · ${story.commentCount} comments
+      ${story.points} points by ${author} · ${relativeTime(story.created_at_i)} · ${story.commentCount} comments
     </div>
   `;
 
@@ -22,7 +38,7 @@ export function renderStory(story) {
 
 /**
  * Recursively render a comment and all its descendants.
- * Each comment is a grid: bar (2px) | row (0fr) | children.
+ * Each comment is a grid: bar (3px) | row (0fr) | children.
  * Bar mode shows a thin colored strip; card mode shows full content.
  * The transition between modes is driven by CSS grid-template-rows.
  */
@@ -36,8 +52,7 @@ export function renderComment(item, depth = 0) {
   // Bar: thin colored strip visible when comment is collapsed
   const bar = document.createElement('div');
   bar.className = 'comment-bar';
-  const intensity = 0.06 + Math.min(Math.sqrt(item.text.length) * 0.008, 0.3);
-  bar.style.background = `rgba(0, 0, 0, ${intensity})`;
+  bar.style.background = barColor(item.text.length);
   comment.appendChild(bar);
 
   // Row: comment content
@@ -45,7 +60,7 @@ export function renderComment(item, depth = 0) {
   content.className = 'comment-content';
   content.innerHTML = `
     <div class="comment-header">
-      <span class="comment-author">${item.author || '[deleted]'}</span>
+      <span class="comment-author">${esc(item.author || '[deleted]')}</span>
       <span class="comment-time">${relativeTime(item.created_at_i)}</span>
     </div>
     <div class="comment-body">${item.text}</div>
@@ -87,17 +102,18 @@ export function renderFrontPage(stories) {
     row.className = 'story-list-item';
     row.href = `?id=${story.objectID}`;
 
-    const domain = story.url ? new URL(story.url).hostname.replace('www.', '') : '';
+    const href = safeHref(story.url || '');
+    const domain = href ? esc(new URL(href).hostname.replace('www.', '')) : '';
 
     row.innerHTML = `
       <div class="story-list-rank">${story.num_comments ?? 0}</div>
       <div class="story-list-content">
         <div class="story-list-title">
-          ${story.title}
+          ${esc(story.title)}
           ${domain ? `<span class="story-domain">(${domain})</span>` : ''}
         </div>
         <div class="story-list-meta">
-          ${story.points} points by ${story.author} · ${relativeTime(story.created_at_i)}
+          ${story.points} points by ${esc(story.author)} · ${relativeTime(story.created_at_i)}
         </div>
       </div>
     `;

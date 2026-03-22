@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "commentree",
   "version": "1.0",
-  "description": "Hacker News with tree previews",
+  "description": "Tree-shaped comment previews for Hacker News and Reddit",
   "content_scripts": [
     {
       "matches": [

@@ -1,0 +1,16 @@
+{
+  "name": "commentree",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A better way to read deeply nested comment threads",
+  "scripts": {
+    "start": "wrangler dev --port 8787 --assets ./src",
+    "build:ext": "esbuild extension/entry.js --bundle --outfile=extension/content.js",
+    "deploy": "rm -rf dist && mkdir -p dist/js && cp src/index.html src/style.css dist/ && cp src/js/*.js dist/js/ && wrangler deploy"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "esbuild": "^0.27.4",
+    "wrangler": "^4"
+  }
+}
