@@ -65,6 +65,7 @@ async function loadFrontPage() {
     container.appendChild(header);
 
     container.appendChild(renderFrontPage(stories));
+    setupOnboarding(container, '', false);
     document.title = 'commentree';
   } catch (err) {
     container.textContent = `Failed to load: ${err.message}`;

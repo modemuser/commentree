@@ -153,6 +153,14 @@
   border-color: #ff6600;
 }
 
+.ct-info-btn-close {
+  font-family: system-ui, sans-serif;
+  font-style: normal;
+  font-size: 18px;
+  font-weight: 300;
+  z-index: 10001;
+}
+
 /* Onboarding overlay */
 .ct-onboard-overlay {
   position: fixed;

@@ -87,6 +87,14 @@ body {
   border-color: #ff6600;
 }
 
+.info-btn-close {
+  font-family: system-ui, sans-serif;
+  font-style: normal;
+  font-size: 18px;
+  font-weight: 300;
+  z-index: 10001;
+}
+
 /* Front page story list */
 .story-list-item {
   display: flex;

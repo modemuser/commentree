@@ -11,7 +11,7 @@ Sites like Hacker News and Reddit display comment trees as indented 2D lists. Th
 
 ## The idea
 
-Commentree adds a "third dimension" to comment threads — not with 3D rendering, but with **progressive disclosure and inline tree shape previews**.
+Commentree replaces the indented list with **progressive disclosure and inline tree shape previews**.
 
 Each comment starts in **bar mode** — a thin colored strip whose opacity reflects the comment's length. Bars stack vertically in the left margin, forming a compact fingerprint of the conversation shape. You can immediately see:
 
