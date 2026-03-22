@@ -1,2 +1,4 @@
 dist/
 .wrangler/
+.DS_Store
+redditthread/
