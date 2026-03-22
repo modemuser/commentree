@@ -109,6 +109,7 @@ src/
     api.js            Algolia HN API fetch
     render.js         Comment rendering (bar + row + children grid)
     interact.js       Expand/collapse interactions + pin logic
+    color.js          Color assignment for comment bars
     onboard.js        First-visit onboarding flow
 extension/
   entry.js            Extension entry point — DOM parsing, rendering
