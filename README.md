@@ -13,7 +13,7 @@ Sites like Hacker News and Reddit display comment trees as indented 2D lists. Th
 
 Commentree replaces the indented list with **progressive disclosure and inline tree shape previews**.
 
-Each comment starts in **bar mode** — a thin colored strip whose opacity reflects the comment's length. Bars stack vertically in the left margin, forming a compact fingerprint of the conversation shape. You can immediately see:
+Each comment starts in **bar mode** — a thin colored strip whose opacity reflects the comment's length. Bars stack vertically, forming a compact fingerprint of the conversation shape. You can immediately see:
 
 - **How many replies** a comment has (bar count)
 - **How deep the conversation goes** (nesting depth)

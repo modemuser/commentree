@@ -43,25 +43,34 @@ export function renderStory(story) {
  * Bar mode shows a thin colored strip; card mode shows full content.
  * The transition between modes is driven by CSS grid-template-rows.
  */
-export function renderComment(item, depth = 0) {
+export function renderComment(item, depth = 0, authorColors = {}, op = null, tlc = null) {
   if (!item || item.text == null) return null;
 
   const comment = document.createElement('div');
   comment.className = 'comment';
   if (item.id) comment.dataset.id = item.id;
 
+  const aColor = authorColors[item.author];
+
   // Bar: thin colored strip visible when comment is collapsed
   const bar = document.createElement('div');
   bar.className = 'comment-bar';
   bar.style.background = barColor(item.text.length);
+  if (aColor) bar.style.boxShadow = `inset 8px 0 0 ${aColor}`;
   comment.appendChild(bar);
 
   // Row: comment content
   const content = document.createElement('div');
   content.className = 'comment-content';
+  const isTlc = tlc && item.author === tlc && aColor;
+  const isOp = op && item.author === op;
+  const authorName = esc(item.author || '[deleted]');
+  const tag = isOp ? ` <span class="op-tag">(OP)</span>` : '';
+  const nameStyle = (isOp || isTlc) && aColor ? ` style="color:${aColor}"` : '';
+  const authorHtml = `<span${nameStyle}>${authorName}</span>${tag}`;
   content.innerHTML = `
     <div class="comment-header">
-      <span class="comment-author">${esc(item.author || '[deleted]')}</span>
+      <span class="comment-author">${authorHtml}</span>
       <span class="comment-time">${relativeTime(item.created_at_i)}</span>
     </div>
     <div class="comment-body">${item.text}</div>
@@ -81,7 +90,7 @@ export function renderComment(item, depth = 0) {
     childrenContainer.className = 'comment-children';
 
     for (const child of validChildren) {
-      const childEl = renderComment(child, depth + 1);
+      const childEl = renderComment(child, depth + 1, authorColors, op, tlc);
       if (childEl) childrenContainer.appendChild(childEl);
     }
 

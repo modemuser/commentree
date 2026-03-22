@@ -274,6 +274,23 @@ body {
   color: #ff6600;
 }
 
+.op-tag {
+  font-size: 10px;
+  font-weight: 400;
+  color: #4363d8;
+}
+
+.tlc-tag {
+  font-size: 10px;
+  font-weight: 400;
+  color: #e6194b;
+}
+
+.author-dot {
+  font-size: 16px;
+  vertical-align: -1.4px;
+}
+
 .comment-time {
   font-size: 10px;
   color: #999;

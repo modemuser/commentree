@@ -2,6 +2,7 @@ import { fetchThread, fetchFrontPage } from './api.js';
 import { renderStory, renderComment, renderFrontPage } from './render.js';
 import { setupInteractions } from './interact.js';
 import { setupOnboarding } from './onboard.js';
+import { buildAuthorColors } from './color.js';
 
 function countDescendants(item) {
   let count = 0;
@@ -40,7 +41,8 @@ async function loadThread(threadId) {
 
     const topLevel = (raw.children || []).filter(c => c.text != null);
     for (const child of topLevel) {
-      const el = renderComment(child);
+      const authorColors = buildAuthorColors(child, raw.author);
+      const el = renderComment(child, 0, authorColors, raw.author, child.author);
       if (el) container.appendChild(el);
     }
 

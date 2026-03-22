@@ -77,11 +77,11 @@
         const row = e.target.closest?.(`.${CLS.row}`);
         if (!row) return;
         const comment = row.parentElement;
-        if (!comment?.classList.contains(CLS.hasChildren)) return;
+        if (!comment?.classList.contains(CLS.comment)) return;
         if (comment.classList.contains(CLS.pinned)) {
           unpinAll();
           history.replaceState(null, "", location.pathname + location.search);
-        } else if (comment.classList.contains(CLS.expanded)) {
+        } else if (comment.classList.contains(CLS.expanded) || !comment.classList.contains(CLS.hasChildren)) {
           pinComment(comment);
         }
       });
@@ -254,19 +254,28 @@
 
   // src/js/onboard.js
   var STORAGE_KEY = "commentree_onboarded";
-  function setupOnboarding(container, p = "") {
+  function setupOnboarding(container, p = "", autoShow = true) {
     const isTouch = matchMedia("(pointer: coarse)").matches;
     const btn = document.createElement("button");
     btn.className = `${p}info-btn`;
     btn.textContent = "i";
-    btn.addEventListener("click", () => showOverlay(container, isTouch, p));
+    btn.addEventListener("click", () => {
+      const overlay = document.querySelector(`.${p}onboard-overlay`);
+      if (overlay) {
+        dismiss(overlay, p);
+      } else {
+        showOverlay(container, isTouch, p, btn);
+      }
+    });
     document.body.appendChild(btn);
-    if (!localStorage.getItem(STORAGE_KEY)) {
-      showOverlay(container, isTouch, p);
+    if (autoShow && !localStorage.getItem(STORAGE_KEY)) {
+      showOverlay(container, isTouch, p, btn);
     }
   }
-  function showOverlay(container, isTouch, p) {
+  function showOverlay(container, isTouch, p, btn) {
     document.querySelector(`.${p}onboard-overlay`)?.remove();
+    btn.textContent = "\xD7";
+    btn.classList.add(`${p}info-btn-close`);
     const overlay = document.createElement("div");
     overlay.className = `${p}onboard-overlay`;
     if (isTouch) {
@@ -276,7 +285,7 @@
         <p>A hover-based UX experiment to help read large nested comment trees.</p>
         <p>Tap a comment to expand its reply tree.</p>
         <p>Tap again to collapse.</p>
-        <p class="${p}onboard-author">by <a href="https://news.ycombinator.com/user?id=modemuser" target="_blank">modemuser</a></p>
+        <p class="${p}onboard-author">by <a href="https://news.ycombinator.com/user?id=modemuser" target="_blank">modemuser</a> \xB7 on <a href="https://github.com/modemuser/commentree" target="_blank">github</a> \xB7 powered by <a href="https://hn.algolia.com/api" target="_blank">algolia</a></p>
         <p class="${p}onboard-dismiss">tap anywhere to start</p>
       </div>
     `;
@@ -298,7 +307,7 @@
         <p>Explore with your mouse cursor, hover to expand.</p>
         <p>Each line represents a comment \u2014 darker lines mean longer comments.</p>
         <p>Best to interact with the tree from the left.</p>
-        <p class="${p}onboard-author">by <a href="https://news.ycombinator.com/user?id=modemuser" target="_blank">modemuser</a></p>
+        <p class="${p}onboard-author">by <a href="https://news.ycombinator.com/user?id=modemuser" target="_blank">modemuser</a> \xB7 <a href="https://github.com/modemuser/commentree" target="_blank">github</a> \xB7 powered by <a href="https://hn.algolia.com/api" target="_blank">algolia</a></p>
         <p class="${p}onboard-dismiss">move your cursor to the left margin to begin</p>
       </div>
     `;
@@ -316,6 +325,11 @@
     localStorage.setItem(STORAGE_KEY, "1");
     overlay.classList.remove(`${p}visible`);
     setTimeout(() => overlay.remove(), 500);
+    const btn = document.querySelector(`.${p}info-btn`);
+    if (btn) {
+      btn.textContent = "i";
+      btn.classList.remove(`${p}info-btn-close`);
+    }
   }
 
   // src/js/color.js
