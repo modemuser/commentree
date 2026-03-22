@@ -25,6 +25,14 @@ Each comment starts in **bar mode** — a thin colored strip whose opacity refle
 
 On touch devices, tap to expand and tap again to collapse.
 
+## Live demo
+
+**https://commentree.acxx.workers.dev**
+
+Open any HN thread by ID: `https://commentree.acxx.workers.dev?id=47440430`
+
+The front page shows current top stories.
+
 ## How it works
 
 ### Data
@@ -76,14 +84,6 @@ Visit any HN or Reddit thread and the tree layout appears automatically.
 The content script runs at `document_idle` on matching pages. On HN, it parses the flat comment table (`tr.athing.comtr` rows with `indent` attributes) into a nested tree. On Reddit, it walks the already-nested `.thing.comment` DOM. In both cases, each comment's original DOM nodes are cloned (preserving votes, author styles, reply links) and rebuilt with bar-to-card expand/collapse behavior.
 
 All CSS classes are prefixed `ct-` to avoid collisions with each site's styles.
-
-## Live demo
-
-**https://commentree.acxx.workers.dev**
-
-Open any HN thread by ID: `https://commentree.acxx.workers.dev?id=47440430`
-
-The front page shows current top stories.
 
 ### Run locally
 
