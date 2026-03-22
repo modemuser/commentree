@@ -533,7 +533,7 @@
   // Info button
   const infoBtn = document.createElement('button');
   infoBtn.className = 'ct-info-btn';
-  infoBtn.textContent = '?';
+  infoBtn.textContent = 'i';
   infoBtn.addEventListener('click', showOnboarding);
   document.body.appendChild(infoBtn);
 

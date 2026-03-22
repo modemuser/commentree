@@ -11,7 +11,7 @@ export function setupOnboarding() {
   // Info button — always present
   const btn = document.createElement('button');
   btn.className = 'info-btn';
-  btn.textContent = '?';
+  btn.textContent = 'i';
   btn.addEventListener('click', () => showOverlay(container, isTouch));
   document.body.appendChild(btn);
 

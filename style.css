@@ -73,8 +73,10 @@ body {
   border: 1px solid #ddd;
   background: #fff;
   color: #999;
+  font-family: Georgia, 'Times New Roman', serif;
   font-size: 14px;
   font-weight: 600;
+  font-style: italic;
   cursor: pointer;
   z-index: 100;
   transition: color 0.15s, border-color 0.15s;
