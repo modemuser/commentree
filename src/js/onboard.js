@@ -58,7 +58,7 @@ function showOverlay(container, isTouch, p, btn) {
         <p>Explore with your mouse cursor, hover to expand.</p>
         <p>Each line represents a comment — darker lines mean longer comments.</p>
         <p>Best to interact with the tree from the left.</p>
-        <p class="${p}onboard-author">by <a href="https://news.ycombinator.com/user?id=modemuser" target="_blank">modemuser</a> · <a href="https://github.com/modemuser/commentree" target="_blank">github</a> · powered by <a href="https://hn.algolia.com/api" target="_blank">algolia</a></p>
+        <p class="${p}onboard-author">by <a href="https://news.ycombinator.com/user?id=modemuser" target="_blank">modemuser</a> · on <a href="https://github.com/modemuser/commentree" target="_blank">github</a> · powered by <a href="https://hn.algolia.com/api" target="_blank">algolia</a></p>
         <p class="${p}onboard-dismiss">move your cursor to the left margin to begin</p>
       </div>
     `;
