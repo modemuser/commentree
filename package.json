@@ -6,7 +6,7 @@
   "scripts": {
     "start": "wrangler dev --port 8787 --assets ./src",
     "build:ext": "esbuild extension/entry.js --bundle --outfile=extension/content.js",
-    "deploy": "rm -rf dist && mkdir -p dist/js && cp src/index.html src/style.css dist/ && cp src/js/*.js dist/js/ && wrangler deploy"
+    "deploy": "wrangler deploy"
   },
   "license": "MIT",
   "devDependencies": {
